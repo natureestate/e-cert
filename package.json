@@ -10,6 +10,17 @@
     "restart": "lsof -ti:3600 | xargs kill -9 2>/dev/null || true && npm run dev"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-form": "^0.1.8",
+    "@radix-ui/react-icons": "^1.3.2",
+    "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-navigation-menu": "^1.2.14",
+    "@radix-ui/react-select": "^2.2.6",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@radix-ui/react-toast": "^1.2.15",
+    "@radix-ui/react-tooltip": "^1.2.8",
+    "@radix-ui/themes": "^3.2.1",
     "firebase": "^12.2.1",
     "html2canvas": "latest",
     "jspdf": "latest",
@@ -17,7 +28,13 @@
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/postcss": "^4.1.12",
+    "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^22.14.0",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.12",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }
