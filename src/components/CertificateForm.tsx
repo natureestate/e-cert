@@ -193,49 +193,75 @@ export const CertificateForm: React.FC<CertificateFormProps> = ({
           
           {!logoSrc ? (
             // UI สำหรับการอัปโหลดเมื่อยังไม่มีโลโก้
-            <Box
-              style={{
-                border: '2px dashed var(--blue-6)',
-                borderRadius: '12px',
-                padding: '1.5rem',
-                backgroundColor: 'var(--blue-2)',
-                textAlign: 'center',
-                position: 'relative',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'var(--blue-8)';
-                e.currentTarget.style.backgroundColor = 'var(--blue-3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'var(--blue-6)';
-                e.currentTarget.style.backgroundColor = 'var(--blue-2)';
-              }}
-            >
-              <input 
-                type="file" 
-                id="logoUpload" 
-                name="logoUpload" 
-                accept="image/*" 
-                onChange={onLogoChange}
+            <Box>
+              <Box
                 style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  opacity: 0,
-                  cursor: 'pointer'
+                  border: '2px dashed var(--blue-6)',
+                  borderRadius: '12px',
+                  padding: '1.5rem',
+                  backgroundColor: 'var(--blue-2)',
+                  textAlign: 'center',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
                 }}
-              />
-              <ImageIcon width="32" height="32" color="var(--blue-9)" style={{ margin: '0 auto 8px' }} />
-              <Text size="3" color="blue" weight="medium" style={{ display: 'block' }}>
-                คลิกเพื่อเลือกไฟล์โลโก้
-              </Text>
-              <Text size="2" color="gray" style={{ marginTop: '4px' }}>
-                รองรับไฟล์ PNG, JPG, SVG
-              </Text>
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--blue-8)';
+                  e.currentTarget.style.backgroundColor = 'var(--blue-3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--blue-6)';
+                  e.currentTarget.style.backgroundColor = 'var(--blue-2)';
+                }}
+              >
+                <input 
+                  type="file" 
+                  id="logoUpload" 
+                  name="logoUpload" 
+                  accept="image/*" 
+                  onChange={onLogoChange}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    opacity: 0,
+                    cursor: 'pointer'
+                  }}
+                />
+                <ImageIcon width="32" height="32" color="var(--blue-9)" style={{ margin: '0 auto 8px' }} />
+                <Text size="3" color="blue" weight="medium" style={{ display: 'block' }}>
+                  คลิกเพื่อเลือกไฟล์โลโก้
+                </Text>
+                <Text size="2" color="gray" style={{ marginTop: '4px' }}>
+                  รองรับไฟล์ PNG, JPG, SVG
+                </Text>
+              </Box>
+
+              {/* ปุ่มเลือกจาก Gallery แสดงเสมอ */}
+              <Box mt="3" style={{ textAlign: 'center' }}>
+                <Button
+                  variant="soft"
+                  size="3"
+                  onClick={() => {
+                    setShowLogoGallery(true);
+                    loadAvailableLogos();
+                  }}
+                  style={{
+                    backgroundColor: 'var(--green-3)',
+                    color: 'var(--green-11)',
+                    border: '1px solid var(--green-6)',
+                    borderRadius: '8px',
+                    padding: '0.75rem 1.5rem'
+                  }}
+                >
+                  <Flex align="center" gap="2">
+                    <ImageIcon width="16" height="16" />
+                    <Text size="3">เลือกจาก Gallery</Text>
+                  </Flex>
+                </Button>
+              </Box>
             </Box>
           ) : (
             // UI สำหรับแสดงโลโก้ที่อัปโหลดแล้ว
@@ -390,10 +416,14 @@ export const CertificateForm: React.FC<CertificateFormProps> = ({
                       backgroundColor: 'var(--green-3)',
                       color: 'var(--green-11)',
                       border: '1px solid var(--green-6)',
-                      borderRadius: '8px'
+                      borderRadius: '8px',
+                      minWidth: 'fit-content'
                     }}
                   >
-                    <Text size="2">เลือกจาก Gallery</Text>
+                    <Flex align="center" gap="1">
+                      <ImageIcon width="14" height="14" />
+                      <Text size="2">Gallery</Text>
+                    </Flex>
                   </Button>
                 </Flex>
               </Box>
