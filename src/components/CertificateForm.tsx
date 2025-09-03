@@ -4,6 +4,7 @@ import { ImageIcon, CheckIcon, PlusIcon, Cross2Icon } from '@radix-ui/react-icon
 import { FormSelect } from './FormSelect';
 import { MultiTagInput } from './MultiTagInput';
 import { FirestoreService } from '../services/firestoreService';
+import { LogoStorageService } from '../services/logoStorageService';
 import { FormDropdownData, Company, Customer, Project, Product, BatchNumber } from '../types/firestore';
 
 interface FormData {
@@ -28,6 +29,7 @@ interface CertificateFormProps {
   logoSize: 'small' | 'medium' | 'large'; // เพิ่ม logoSize
   onLogoSizeChange: (size: 'small' | 'medium' | 'large') => void; // เพิ่ม handler สำหรับขนาดโลโก้
   onRemoveLogo: () => void; // เพิ่ม handler สำหรับลบโลโก้
+  onSelectLogoFromGallery?: (logoInfo: any) => void; // เพิ่ม handler สำหรับเลือกโลโก้จาก gallery
 }
 
 export const CertificateForm: React.FC<CertificateFormProps> = ({
@@ -41,7 +43,8 @@ export const CertificateForm: React.FC<CertificateFormProps> = ({
   logoFileName,
   logoSize,
   onLogoSizeChange,
-  onRemoveLogo
+  onRemoveLogo,
+  onSelectLogoFromGallery
 }) => {
   const [dropdownData, setDropdownData] = useState<FormDropdownData>({
     companies: [],
@@ -52,6 +55,11 @@ export const CertificateForm: React.FC<CertificateFormProps> = ({
   });
   const [loading, setLoading] = useState(true);
   const [filteredProjects, setFilteredProjects] = useState(dropdownData.projects);
+  
+  // States สำหรับ Logo Gallery
+  const [showLogoGallery, setShowLogoGallery] = useState(false);
+  const [availableLogos, setAvailableLogos] = useState<any[]>([]);
+  const [loadingLogos, setLoadingLogos] = useState(false);
 
   // โหลดข้อมูล dropdown จาก Firestore
   useEffect(() => {
@@ -90,6 +98,47 @@ export const CertificateForm: React.FC<CertificateFormProps> = ({
       setFilteredProjects(dropdownData.projects);
     }
   }, [formData.customerId, dropdownData.projects]);
+
+  // ฟังก์ชันโหลดโลโก้ที่มีอยู่แล้ว
+  const loadAvailableLogos = async () => {
+    setLoadingLogos(true);
+    try {
+      const logos = await LogoStorageService.getCompanyLogos();
+      setAvailableLogos(logos);
+      console.log('📂 โหลดโลโก้ที่มีอยู่:', logos.length, 'ไฟล์');
+    } catch (error) {
+      console.error('❌ เกิดข้อผิดพลาดในการโหลดโลโก้:', error);
+    } finally {
+      setLoadingLogos(false);
+    }
+  };
+
+  // ฟังก์ชันเลือกโลโก้จาก gallery
+  const handleSelectLogoFromGallery = (logoInfo: any) => {
+    console.log('🎯 เลือกโลโก้จาก gallery:', logoInfo.fileName);
+    
+    // เรียก callback ที่ส่งมาจาก App.tsx
+    if (onSelectLogoFromGallery) {
+      onSelectLogoFromGallery(logoInfo);
+    }
+    
+    // ปิด gallery
+    setShowLogoGallery(false);
+  };
+
+  // ฟังก์ชันลบโลโก้จาก gallery
+  const handleDeleteLogoFromGallery = async (logoInfo: any) => {
+    if (confirm(`คุณต้องการลบโลโก้ "${logoInfo.fileName}" หรือไม่?`)) {
+      try {
+        await LogoStorageService.deleteLogo(logoInfo.fullPath);
+        await loadAvailableLogos(); // โหลดรายการใหม่
+        console.log('✅ ลบโลโก้จาก gallery สำเร็จ');
+      } catch (error) {
+        console.error('❌ เกิดข้อผิดพลาดในการลบโลโก้:', error);
+        alert('ไม่สามารถลบโลโก้ได้ กรุณาลองใหม่อีกครั้ง');
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -283,48 +332,70 @@ export const CertificateForm: React.FC<CertificateFormProps> = ({
                 </Flex>
               </Box>
 
-              {/* ปุ่มเปลี่ยนโลโก้ */}
+              {/* ปุ่มเปลี่ยนโลโก้และเลือกจาก Gallery */}
               <Box mt="3">
-                <Box
-                  style={{
-                    border: '1px dashed var(--blue-6)',
-                    borderRadius: '8px',
-                    padding: '0.75rem',
-                    backgroundColor: 'var(--blue-1)',
-                    textAlign: 'center',
-                    position: 'relative',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--blue-8)';
-                    e.currentTarget.style.backgroundColor = 'var(--blue-2)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--blue-6)';
-                    e.currentTarget.style.backgroundColor = 'var(--blue-1)';
-                  }}
-                >
-                  <input 
-                    type="file" 
-                    id="logoUpload" 
-                    name="logoUpload" 
-                    accept="image/*" 
-                    onChange={onLogoChange}
+                <Flex gap="2">
+                  {/* ปุ่มเปลี่ยนโลโก้ใหม่ */}
+                  <Box
                     style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      opacity: 0,
-                      cursor: 'pointer'
+                      flex: 1,
+                      border: '1px dashed var(--blue-6)',
+                      borderRadius: '8px',
+                      padding: '0.75rem',
+                      backgroundColor: 'var(--blue-1)',
+                      textAlign: 'center',
+                      position: 'relative',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
                     }}
-                  />
-                  <Text size="2" color="blue" weight="medium">
-                    คลิกเพื่อเปลี่ยนโลโก้
-                  </Text>
-                </Box>
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--blue-8)';
+                      e.currentTarget.style.backgroundColor = 'var(--blue-2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--blue-6)';
+                      e.currentTarget.style.backgroundColor = 'var(--blue-1)';
+                    }}
+                  >
+                    <input 
+                      type="file" 
+                      id="logoUpload" 
+                      name="logoUpload" 
+                      accept="image/*" 
+                      onChange={onLogoChange}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        opacity: 0,
+                        cursor: 'pointer'
+                      }}
+                    />
+                    <Text size="2" color="blue" weight="medium">
+                      อัปโหลดใหม่
+                    </Text>
+                  </Box>
+
+                  {/* ปุ่มเลือกจาก Gallery */}
+                  <Button
+                    variant="soft"
+                    size="2"
+                    onClick={() => {
+                      setShowLogoGallery(true);
+                      loadAvailableLogos();
+                    }}
+                    style={{
+                      backgroundColor: 'var(--green-3)',
+                      color: 'var(--green-11)',
+                      border: '1px solid var(--green-6)',
+                      borderRadius: '8px'
+                    }}
+                  >
+                    <Text size="2">เลือกจาก Gallery</Text>
+                  </Button>
+                </Flex>
               </Box>
             </Box>
           )}
@@ -483,6 +554,155 @@ export const CertificateForm: React.FC<CertificateFormProps> = ({
             </Text>
           </Flex>
         </Button>
+
+        {/* Logo Gallery Modal */}
+        {showLogoGallery && (
+          <Box
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '2rem'
+            }}
+            onClick={() => setShowLogoGallery(false)}
+          >
+            <Card
+              variant="surface"
+              style={{
+                maxWidth: '600px',
+                width: '100%',
+                maxHeight: '80vh',
+                overflow: 'auto',
+                padding: '2rem',
+                backgroundColor: 'white',
+                borderRadius: '12px'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Flex align="center" justify="between" mb="4">
+                <Heading as="h3" size="5">โลโก้ที่เคยอัปโหลด</Heading>
+                <Button
+                  variant="soft"
+                  size="2"
+                  color="gray"
+                  onClick={() => setShowLogoGallery(false)}
+                >
+                  <Cross2Icon width="16" height="16" />
+                </Button>
+              </Flex>
+
+              {loadingLogos ? (
+                <Box style={{ textAlign: 'center', padding: '2rem' }}>
+                  <Text color="gray">กำลังโหลดโลโก้...</Text>
+                </Box>
+              ) : availableLogos.length === 0 ? (
+                <Box style={{ textAlign: 'center', padding: '2rem' }}>
+                  <Text color="gray">ยังไม่มีโลโก้ที่เคยอัปโหลด</Text>
+                </Box>
+              ) : (
+                <Box
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                    gap: '1rem'
+                  }}
+                >
+                  {availableLogos.map((logo, index) => (
+                    <Box
+                      key={index}
+                      style={{
+                        border: '1px solid var(--gray-6)',
+                        borderRadius: '8px',
+                        padding: '0.75rem',
+                        backgroundColor: 'var(--gray-1)',
+                        textAlign: 'center',
+                        position: 'relative',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--blue-8)';
+                        e.currentTarget.style.backgroundColor = 'var(--blue-2)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--gray-6)';
+                        e.currentTarget.style.backgroundColor = 'var(--gray-1)';
+                      }}
+                      onClick={() => handleSelectLogoFromGallery(logo)}
+                    >
+                      {/* รูปโลโก้ */}
+                      <Box
+                        style={{
+                          width: '80px',
+                          height: '80px',
+                          margin: '0 auto 0.5rem',
+                          border: '1px solid var(--gray-6)',
+                          borderRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: 'white',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        <img
+                          src={logo.url}
+                          alt={`Logo ${index + 1}`}
+                          style={{
+                            maxWidth: '100%',
+                            maxHeight: '100%',
+                            objectFit: 'contain'
+                          }}
+                        />
+                      </Box>
+
+                      {/* ชื่อไฟล์ (ย่อ) */}
+                      <Text size="1" color="gray" style={{ 
+                        fontSize: '0.7rem',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {logo.fileName?.substring(0, 15) || `Logo ${index + 1}`}
+                        {(logo.fileName?.length || 0) > 15 ? '...' : ''}
+                      </Text>
+
+                      {/* ปุ่มลบ */}
+                      <Button
+                        variant="soft"
+                        size="1"
+                        color="red"
+                        style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '4px',
+                          minWidth: '20px',
+                          width: '20px',
+                          height: '20px',
+                          padding: '0',
+                          borderRadius: '10px'
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteLogoFromGallery(logo);
+                        }}
+                      >
+                        <Cross2Icon width="10" height="10" />
+                      </Button>
+                    </Box>
+                  ))}
+                </Box>
+              )}
+            </Card>
+          </Box>
+        )}
       </Card>
     </Section>
   );

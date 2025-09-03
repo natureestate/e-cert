@@ -330,6 +330,22 @@ const App: React.FC = () => {
     LogoStorageService.updateLogoSize(size); // อัปเดตใน localStorage
   };
 
+  // ฟังก์ชันสำหรับเลือกโลโก้จาก Gallery
+  const handleSelectLogoFromGallery = (logoInfo: LogoInfo) => {
+    console.log('🎯 เลือกโลโก้จาก gallery:', logoInfo.fileName);
+    
+    // อัปเดต state ด้วยข้อมูลจาก gallery
+    setLogoInfo(logoInfo);
+    setLogoSrc(logoInfo.url);
+    setLogoFileName(logoInfo.fileName);
+    setLogoSize(logoInfo.size);
+    
+    // อัปเดต localStorage
+    LogoStorageService.saveLogoToLocalStorage(logoInfo);
+    
+    console.log('✅ เลือกโลโก้จาก gallery สำเร็จ!');
+  };
+
   // บันทึกใบรับประกันลง Firestore (เปลี่ยนจาก preview เป็นเอกสารจริง)
   const handleGenerate = async () => {
     console.log('🔘 กดปุ่มบันทึกใบรับประกัน');
@@ -525,6 +541,7 @@ const App: React.FC = () => {
               logoSize={logoSize}
               onLogoSizeChange={handleLogoSizeChange}
               onRemoveLogo={handleRemoveLogo}
+              onSelectLogoFromGallery={handleSelectLogoFromGallery}
             />
             
             <CertificatePreview

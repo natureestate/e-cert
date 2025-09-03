@@ -120,7 +120,7 @@ export class LogoStorageService {
   /**
    * บันทึกข้อมูลโลโก้ลง localStorage
    */
-  private static saveLogoToLocalStorage(logoInfo: LogoInfo): void {
+  static saveLogoToLocalStorage(logoInfo: LogoInfo): void {
     try {
       localStorage.setItem('currentLogo', JSON.stringify(logoInfo));
     } catch (error) {
