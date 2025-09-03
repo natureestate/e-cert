@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Card, Heading, Flex, Text, TextField, Button, Section } from '@radix-ui/themes';
-import { ImageIcon, CheckIcon, PlusIcon } from '@radix-ui/react-icons';
+import { ImageIcon, CheckIcon, PlusIcon, Cross2Icon } from '@radix-ui/react-icons';
 import { FormSelect } from './FormSelect';
 import { MultiTagInput } from './MultiTagInput';
 import { FirestoreService } from '../services/firestoreService';
@@ -23,6 +23,11 @@ interface CertificateFormProps {
   onLogoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onGenerate: () => void;
   isFormValid: boolean;
+  logoSrc: string | null; // เพิ่ม logoSrc
+  logoFileName: string | null; // เพิ่ม logoFileName
+  logoSize: 'small' | 'medium' | 'large'; // เพิ่ม logoSize
+  onLogoSizeChange: (size: 'small' | 'medium' | 'large') => void; // เพิ่ม handler สำหรับขนาดโลโก้
+  onRemoveLogo: () => void; // เพิ่ม handler สำหรับลบโลโก้
 }
 
 export const CertificateForm: React.FC<CertificateFormProps> = ({
@@ -31,7 +36,12 @@ export const CertificateForm: React.FC<CertificateFormProps> = ({
   onBatchNumbersChange,
   onLogoChange,
   onGenerate,
-  isFormValid
+  isFormValid,
+  logoSrc,
+  logoFileName,
+  logoSize,
+  onLogoSizeChange,
+  onRemoveLogo
 }) => {
   const [dropdownData, setDropdownData] = useState<FormDropdownData>({
     companies: [],
@@ -131,50 +141,193 @@ export const CertificateForm: React.FC<CertificateFormProps> = ({
               โลโก้บริษัท
             </Text>
           </Flex>
-          <Box
-            style={{
-              border: '2px dashed var(--blue-6)',
-              borderRadius: '12px',
-              padding: '1.5rem',
-              backgroundColor: 'var(--blue-2)',
-              textAlign: 'center',
-              position: 'relative',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'var(--blue-8)';
-              e.currentTarget.style.backgroundColor = 'var(--blue-3)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'var(--blue-6)';
-              e.currentTarget.style.backgroundColor = 'var(--blue-2)';
-            }}
-          >
-            <input 
-              type="file" 
-              id="logoUpload" 
-              name="logoUpload" 
-              accept="image/*" 
-              onChange={onLogoChange}
+          
+          {!logoSrc ? (
+            // UI สำหรับการอัปโหลดเมื่อยังไม่มีโลโก้
+            <Box
               style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                opacity: 0,
-                cursor: 'pointer'
+                border: '2px dashed var(--blue-6)',
+                borderRadius: '12px',
+                padding: '1.5rem',
+                backgroundColor: 'var(--blue-2)',
+                textAlign: 'center',
+                position: 'relative',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
               }}
-            />
-            <ImageIcon width="32" height="32" color="var(--blue-9)" style={{ margin: '0 auto 8px' }} />
-            <Text size="3" color="blue" weight="medium" style={{ display: 'block' }}>
-              คลิกเพื่อเลือกไฟล์โลโก้
-            </Text>
-            <Text size="2" color="gray" style={{ marginTop: '4px' }}>
-              รองรับไฟล์ PNG, JPG, SVG
-            </Text>
-          </Box>
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--blue-8)';
+                e.currentTarget.style.backgroundColor = 'var(--blue-3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--blue-6)';
+                e.currentTarget.style.backgroundColor = 'var(--blue-2)';
+              }}
+            >
+              <input 
+                type="file" 
+                id="logoUpload" 
+                name="logoUpload" 
+                accept="image/*" 
+                onChange={onLogoChange}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  opacity: 0,
+                  cursor: 'pointer'
+                }}
+              />
+              <ImageIcon width="32" height="32" color="var(--blue-9)" style={{ margin: '0 auto 8px' }} />
+              <Text size="3" color="blue" weight="medium" style={{ display: 'block' }}>
+                คลิกเพื่อเลือกไฟล์โลโก้
+              </Text>
+              <Text size="2" color="gray" style={{ marginTop: '4px' }}>
+                รองรับไฟล์ PNG, JPG, SVG
+              </Text>
+            </Box>
+          ) : (
+            // UI สำหรับแสดงโลโก้ที่อัปโหลดแล้ว
+            <Box>
+              {/* ตัวอย่างโลโก้ที่อัปโหลด */}
+              <Box
+                style={{
+                  border: '2px solid var(--green-6)',
+                  borderRadius: '12px',
+                  padding: '1rem',
+                  backgroundColor: 'var(--green-2)',
+                  position: 'relative'
+                }}
+              >
+                <Flex align="center" gap="3">
+                  <Box
+                    style={{
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      border: '1px solid var(--gray-6)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: 'white'
+                    }}
+                  >
+                    <img 
+                      src={logoSrc} 
+                      alt="Logo Preview" 
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        objectFit: 'contain'
+                      }}
+                    />
+                  </Box>
+                  <Box style={{ flex: 1 }}>
+                    <Text size="3" weight="medium" style={{ color: 'var(--green-11)', display: 'block' }}>
+                      ✅ อัปโหลดสำเร็จ
+                    </Text>
+                    <Text size="2" color="gray" style={{ marginTop: '2px' }}>
+                      {logoFileName}
+                    </Text>
+                  </Box>
+                  <Button
+                    variant="soft"
+                    size="2"
+                    color="red"
+                    onClick={onRemoveLogo}
+                    style={{
+                      minWidth: '32px',
+                      padding: '8px',
+                      borderRadius: '8px'
+                    }}
+                    title="ลบโลโก้"
+                  >
+                    <Cross2Icon width="14" height="14" />
+                  </Button>
+                </Flex>
+              </Box>
+
+              {/* ตัวเลือกขนาดโลโก้ */}
+              <Box mt="4">
+                <Text as="label" size="2" weight="medium" mb="2" style={{ display: 'block', color: 'var(--blue-11)' }}>
+                  ขนาดโลโก้ในใบรับประกัน
+                </Text>
+                <Flex gap="2">
+                  {(['small', 'medium', 'large'] as const).map((size) => (
+                    <Button
+                      key={size}
+                      variant={logoSize === size ? 'solid' : 'soft'}
+                      size="2"
+                      onClick={() => onLogoSizeChange(size)}
+                      style={{
+                        flex: 1,
+                        backgroundColor: logoSize === size 
+                          ? 'var(--blue-9)' 
+                          : 'var(--blue-3)',
+                        color: logoSize === size 
+                          ? 'white' 
+                          : 'var(--blue-11)',
+                        border: logoSize === size 
+                          ? '2px solid var(--blue-11)' 
+                          : '1px solid var(--blue-6)'
+                      }}
+                    >
+                      <Text size="2">
+                        {size === 'small' ? 'เล็ก' : size === 'medium' ? 'กลาง' : 'ใหญ่'}
+                      </Text>
+                    </Button>
+                  ))}
+                </Flex>
+              </Box>
+
+              {/* ปุ่มเปลี่ยนโลโก้ */}
+              <Box mt="3">
+                <Box
+                  style={{
+                    border: '1px dashed var(--blue-6)',
+                    borderRadius: '8px',
+                    padding: '0.75rem',
+                    backgroundColor: 'var(--blue-1)',
+                    textAlign: 'center',
+                    position: 'relative',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--blue-8)';
+                    e.currentTarget.style.backgroundColor = 'var(--blue-2)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--blue-6)';
+                    e.currentTarget.style.backgroundColor = 'var(--blue-1)';
+                  }}
+                >
+                  <input 
+                    type="file" 
+                    id="logoUpload" 
+                    name="logoUpload" 
+                    accept="image/*" 
+                    onChange={onLogoChange}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      opacity: 0,
+                      cursor: 'pointer'
+                    }}
+                  />
+                  <Text size="2" color="blue" weight="medium">
+                    คลิกเพื่อเปลี่ยนโลโก้
+                  </Text>
+                </Box>
+              </Box>
+            </Box>
+          )}
         </Box>
 
       {/* Company Selection */}

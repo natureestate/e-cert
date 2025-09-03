@@ -1,0 +1,28 @@
+rules_version = '2';
+
+// Firebase Storage security rules สำหรับโปรแกรมออกใบรับประกัน
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // กฎสำหรับโลโก้บริษัท
+    match /company-logos/{logoId} {
+      // อนุญาตให้อ่านได้ทุกคน (สำหรับแสดงโลโก้ในใบรับประกัน)
+      allow read: if true;
+      
+      // อนุญาตให้อัปโหลดและแก้ไขได้
+      allow write: if true &&
+                      // ตรวจสอบว่าเป็นไฟล์รูปภาพ
+                      resource.contentType.matches('image/.*') &&
+                      // จำกัดขนาดไฟล์ไม่เกิน 5MB
+                      resource.size < 5 * 1024 * 1024;
+      
+      // อนุญาตให้ลบได้
+      allow delete: if true;
+    }
+    
+    // กฎเริ่มต้น: ปฏิเสธการเข้าถึงไฟล์อื่นๆ
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

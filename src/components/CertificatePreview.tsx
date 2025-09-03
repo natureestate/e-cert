@@ -6,8 +6,11 @@ import { CertificateDetails, WarrantyTerms, defaultWarrantyTerms } from '../type
 interface CertificatePreviewProps {
   certificateDetails: CertificateDetails | null;
   logoSrc: string | null;
+  logoSize?: 'small' | 'medium' | 'large'; // เพิ่ม logoSize
   onExportPDF: () => void;
+  onPrint?: () => void; // เพิ่มฟังก์ชัน print
   isExporting: boolean;
+  isPrinting?: boolean; // เพิ่ม state สำหรับ printing
   warrantyTerms?: WarrantyTerms;
   onWarrantyTermsChange?: (terms: WarrantyTerms) => void;
   editable?: boolean;
@@ -17,8 +20,11 @@ interface CertificatePreviewProps {
 export const CertificatePreview: React.FC<CertificatePreviewProps> = ({
   certificateDetails,
   logoSrc,
+  logoSize = 'medium',
   onExportPDF,
+  onPrint,
   isExporting,
+  isPrinting = false,
   warrantyTerms = defaultWarrantyTerms,
   onWarrantyTermsChange,
   editable = false,
@@ -147,11 +153,19 @@ export const CertificatePreview: React.FC<CertificatePreviewProps> = ({
 
           <div id="certificate" className="certificate-wrapper">
             <header className="cert-header">
-              <div className="cert-header-content">
-                <div className="cert-logo-section">
-                  {logoSrc && <img src={logoSrc} alt="Company Logo" className="cert-logo" />}
+              {/* โลโก้ด้านบนสุดกึ่งกลาง */}
+              {logoSrc && (
+                <div className="cert-logo-top">
+                  <img 
+                    src={logoSrc} 
+                    alt="Company Logo" 
+                    className={`cert-logo cert-logo-${logoSize}`} 
+                  />
                 </div>
-                <div className="cert-title-section">
+              )}
+              
+              <div className="cert-header-content">
+                <div className="cert-title-section-full">
                   <h4>ใบรับประกันสินค้า</h4>
                   <div className="cert-number">เลขที่: {certificateDetails.certificateNumber}</div>
                 </div>
@@ -312,41 +326,83 @@ export const CertificatePreview: React.FC<CertificatePreviewProps> = ({
             </footer>
           </div>
           
-          <Button 
-            size="4"
-            style={{ 
-              width: '100%', 
-              marginTop: '2rem',
-              background: isExporting 
-                ? 'var(--gray-6)' 
-                : 'linear-gradient(135deg, var(--violet-9), var(--purple-9))',
-              border: 'none',
-              borderRadius: '12px',
-              boxShadow: !isExporting ? 'var(--shadow-md)' : 'none',
-              transition: 'all 0.2s ease'
-            }}
-            onClick={onExportPDF} 
-            disabled={isExporting}
-            onMouseEnter={(e) => {
-              if (!isExporting) {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isExporting) {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-              }
-            }}
-          >
-            <Flex align="center" gap="2" justify="center">
-              <DownloadIcon width="20" height="20" />
-              <Text size="4" weight="bold">
-                {isExporting ? 'กำลังส่งออก...' : 'ส่งออกเป็น PDF'}
-              </Text>
-            </Flex>
-          </Button>
+          {/* ปุ่มส่งออกและพิมพ์ */}
+          <Flex gap="3" style={{ marginTop: '2rem', width: '100%' }}>
+            {/* ปุ่มส่งออกเป็น PDF */}
+            <Button 
+              size="4"
+              style={{ 
+                flex: 1,
+                background: isExporting 
+                  ? 'var(--gray-6)' 
+                  : 'linear-gradient(135deg, var(--violet-9), var(--purple-9))',
+                border: 'none',
+                borderRadius: '12px',
+                boxShadow: !isExporting ? 'var(--shadow-md)' : 'none',
+                transition: 'all 0.2s ease'
+              }}
+              onClick={onExportPDF} 
+              disabled={isExporting || isPrinting}
+              onMouseEnter={(e) => {
+                if (!isExporting && !isPrinting) {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isExporting && !isPrinting) {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                }
+              }}
+            >
+              <Flex align="center" gap="2" justify="center">
+                <DownloadIcon width="18" height="18" />
+                <Text size="3" weight="bold">
+                  {isExporting ? 'กำลังส่งออก...' : 'ส่งออก PDF'}
+                </Text>
+              </Flex>
+            </Button>
+
+            {/* ปุ่ม Print Preview */}
+            {onPrint && (
+              <Button 
+                size="4"
+                style={{ 
+                  flex: 1,
+                  background: isPrinting 
+                    ? 'var(--gray-6)' 
+                    : 'linear-gradient(135deg, var(--orange-9), var(--amber-9))',
+                  border: 'none',
+                  borderRadius: '12px',
+                  boxShadow: !isPrinting ? 'var(--shadow-md)' : 'none',
+                  transition: 'all 0.2s ease',
+                  color: 'white'
+                }}
+                onClick={onPrint} 
+                disabled={isExporting || isPrinting}
+                onMouseEnter={(e) => {
+                  if (!isExporting && !isPrinting) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isExporting && !isPrinting) {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                  }
+                }}
+              >
+                <Flex align="center" gap="2" justify="center">
+                  <FileIcon width="18" height="18" />
+                  <Text size="3" weight="bold">
+                    {isPrinting ? 'กำลังเตรียม...' : 'พิมพ์เอกสาร'}
+                  </Text>
+                </Flex>
+              </Button>
+            )}
+          </Flex>
         </>
       ) : (
         <Card 

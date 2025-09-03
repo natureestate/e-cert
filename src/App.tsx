@@ -7,7 +7,9 @@ import { CertificateHistory } from './components/CertificateHistory';
 import { DataManagementRadix } from './components/DataManagementRadix';
 import { CertificateDetails, WarrantyTerms, defaultWarrantyTerms } from './types/certificate';
 import { exportCertificateToPDF } from './utils/pdfGenerator';
+import { printCertificate } from './utils/printUtils';
 import { FirestoreService } from './services/firestoreService';
+import { LogoStorageService, LogoInfo } from './services/logoStorageService';
 import { Company, Customer, Project, Product, BatchNumber, Certificate } from './types/firestore';
 import '@radix-ui/themes/styles.css'; // Import Radix Themes CSS
 import './config/firebase'; // Initialize Firebase
@@ -41,8 +43,12 @@ const App: React.FC = () => {
 
   // State สำหรับโลโก้และใบรับประกัน
   const [logoSrc, setLogoSrc] = useState<string | null>(null);
+  const [logoSize, setLogoSize] = useState<'small' | 'medium' | 'large'>('medium'); // เพิ่ม state สำหรับขนาดโลโก้
+  const [logoFileName, setLogoFileName] = useState<string | null>(null); // เพิ่ม state สำหรับชื่อไฟล์โลโก้
+  const [logoInfo, setLogoInfo] = useState<LogoInfo | null>(null); // เพิ่ม state สำหรับข้อมูลโลโก้จาก Storage
   const [certificateDetails, setCertificateDetails] = useState<CertificateDetails | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false); // เพิ่ม state สำหรับ printing
   const [warrantyTerms, setWarrantyTerms] = useState<WarrantyTerms>(defaultWarrantyTerms);
   const [viewingCertificate, setViewingCertificate] = useState<Certificate | null>(null);
 
@@ -57,6 +63,27 @@ const App: React.FC = () => {
     };
     
     initializeData();
+  }, []);
+
+  // โหลดโลโก้ที่เก็บไว้แล้วจาก localStorage เมื่อ app เริ่มต้น
+  useEffect(() => {
+    const loadSavedLogo = () => {
+      try {
+        const savedLogoInfo = LogoStorageService.getLogoFromLocalStorage();
+        if (savedLogoInfo) {
+          console.log('🔄 กำลังโหลดโลโก้ที่เก็บไว้...', savedLogoInfo.fileName);
+          setLogoInfo(savedLogoInfo);
+          setLogoSrc(savedLogoInfo.url);
+          setLogoFileName(savedLogoInfo.fileName);
+          setLogoSize(savedLogoInfo.size);
+          console.log('✅ โหลดโลโก้สำเร็จ!');
+        }
+      } catch (error) {
+        console.error('❌ เกิดข้อผิดพลาดในการโหลดโลโก้:', error);
+      }
+    };
+    
+    loadSavedLogo();
   }, []);
 
   // State สำหรับข้อมูลที่ดึงมาจาก Firestore
@@ -226,16 +253,81 @@ const App: React.FC = () => {
   }, [isFormValid, relatedData, formData.batchNumbers, formData.deliveryDate, formData.additionalNotes, viewingCertificate]);
 
   // จัดการการอัปโหลดโลโก้
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const newLogoSrc = event.target?.result as string;
-        setLogoSrc(newLogoSrc);
-      };
-      reader.readAsDataURL(file);
+      
+      // ตรวจสอบไฟล์
+      if (!LogoStorageService.isValidImageFile(file)) {
+        alert('กรุณาเลือกไฟล์รูปภาพ (PNG, JPG, SVG, WebP)');
+        return;
+      }
+      
+      if (!LogoStorageService.isValidFileSize(file)) {
+        alert('ขนาดไฟล์ต้องไม่เกิน 5MB');
+        return;
+      }
+
+      try {
+        // แสดงโลโก้ preview ทันทีด้วย FileReader
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const newLogoSrc = event.target?.result as string;
+          setLogoSrc(newLogoSrc);
+          setLogoFileName(file.name);
+        };
+        reader.readAsDataURL(file);
+
+        // อัปโหลดไปยัง Firebase Storage แบบ background
+        console.log('🔄 กำลังอัปโหลดโลโก้ไปยัง Firebase Storage...');
+        const uploadedLogoInfo = await LogoStorageService.uploadLogo(
+          file, 
+          relatedData.company?.id // ส่ง company ID หากมี
+        );
+        
+        // อัปเดต state ด้วยข้อมูลจาก Storage
+        setLogoInfo(uploadedLogoInfo);
+        setLogoSrc(uploadedLogoInfo.url);
+        setLogoFileName(uploadedLogoInfo.fileName);
+        
+        console.log('✅ อัปโหลดโลโก้สำเร็จ!', uploadedLogoInfo);
+      } catch (error) {
+        console.error('❌ เกิดข้อผิดพลาดในการอัปโหลดโลโก้:', error);
+        alert((error as Error).message);
+      }
     }
+  };
+
+  // ฟังก์ชันลบโลโก้
+  const handleRemoveLogo = async () => {
+    try {
+      // ลบจาก Firebase Storage หากมี
+      if (logoInfo?.fullPath) {
+        console.log('🔄 กำลังลบโลโก้จาก Firebase Storage...');
+        await LogoStorageService.deleteLogo(logoInfo.fullPath);
+        console.log('✅ ลบโลโก้จาก Storage สำเร็จ!');
+      }
+      
+      // ล้าง state
+      setLogoSrc(null);
+      setLogoFileName(null);
+      setLogoInfo(null);
+      
+      // รีเซ็ต input file
+      const fileInput = document.getElementById('logoUpload') as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
+      }
+    } catch (error) {
+      console.error('❌ เกิดข้อผิดพลาดในการลบโลโก้:', error);
+      alert((error as Error).message);
+    }
+  };
+
+  // ฟังก์ชันสำหรับเปลี่ยนขนาดโลโก้
+  const handleLogoSizeChange = (size: 'small' | 'medium' | 'large') => {
+    setLogoSize(size);
+    LogoStorageService.updateLogoSize(size); // อัปเดตใน localStorage
   };
 
   // บันทึกใบรับประกันลง Firestore (เปลี่ยนจาก preview เป็นเอกสารจริง)
@@ -362,6 +454,27 @@ const App: React.FC = () => {
     }
   };
 
+  // พิมพ์เอกสาร
+  const handlePrint = async () => {
+    console.log('🔘 กดปุ่มพิมพ์เอกสาร');
+    console.log('📋 certificateDetails:', certificateDetails);
+    
+    if (!certificateDetails) {
+      alert('ไม่พบข้อมูลใบรับประกัน กรุณากรอกข้อมูลให้ครบถ้วนก่อน');
+      return;
+    }
+
+    setIsPrinting(true);
+    try {
+      await printCertificate(certificateDetails.certificateNumber);
+    } catch (error) {
+      console.error('❌ เกิดข้อผิดพลาดในการพิมพ์:', error);
+      alert((error as Error).message);
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   // Handle viewing certificate from history
   const handleViewCertificate = (certificate: Certificate) => {
     const certDetails: CertificateDetails = {
@@ -407,13 +520,21 @@ const App: React.FC = () => {
               onLogoChange={handleLogoChange}
               onGenerate={handleGenerate}
               isFormValid={isFormValid}
+              logoSrc={logoSrc}
+              logoFileName={logoFileName}
+              logoSize={logoSize}
+              onLogoSizeChange={handleLogoSizeChange}
+              onRemoveLogo={handleRemoveLogo}
             />
             
             <CertificatePreview
               certificateDetails={certificateDetails}
               logoSrc={logoSrc}
+              logoSize={logoSize}
               onExportPDF={handleExportPDF}
+              onPrint={handlePrint}
               isExporting={isExporting}
+              isPrinting={isPrinting}
               warrantyTerms={warrantyTerms}
               onWarrantyTermsChange={setWarrantyTerms}
               editable={!viewingCertificate} // Only editable when creating new certificate
