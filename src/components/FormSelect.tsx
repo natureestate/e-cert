@@ -1,6 +1,6 @@
-import React from 'react';
-import { Box, Text, Select, Button, Flex } from '@radix-ui/themes';
-import { PlusIcon } from '@radix-ui/react-icons';
+import React, { useState, useMemo } from 'react';
+import { Box, Text, Select, TextField } from '@radix-ui/themes';
+import { MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import { DropdownOption } from '../types/firestore';
 
 interface FormSelectProps {
@@ -12,8 +12,6 @@ interface FormSelectProps {
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   placeholder?: string;
   required?: boolean;
-  allowAddNew?: boolean;
-  onAddNew?: () => void;
 }
 
 export const FormSelect: React.FC<FormSelectProps> = ({
@@ -24,10 +22,18 @@ export const FormSelect: React.FC<FormSelectProps> = ({
   options,
   onChange,
   placeholder = 'เลือก...',
-  required = false,
-  allowAddNew = false,
-  onAddNew
+  required = false
 }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // กรองตัวเลือกตามคำค้นหา
+  const filteredOptions = useMemo(() => {
+    if (!searchTerm) return options;
+    return options.filter(option => 
+      option.label.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [options, searchTerm]);
+
   // Convert Radix Select change to standard form change event
   const handleSelectChange = (newValue: string) => {
     const event = {
@@ -46,30 +52,60 @@ export const FormSelect: React.FC<FormSelectProps> = ({
         {required && <span style={{ color: 'var(--red-9)', marginLeft: '3px' }}>*</span>}
       </Text>
       
-      <Flex gap="3" align="center">
-        <Box style={{ flex: 1 }}>
-          <Select.Root value={value} onValueChange={handleSelectChange}>
-            <Select.Trigger 
-              placeholder={placeholder}
-              style={{ 
-                width: '100%',
-                padding: '0.875rem 1rem',
-                borderRadius: '10px',
-                border: '1px solid var(--slate-6)',
-                backgroundColor: 'white',
-                boxShadow: 'var(--shadow-sm)',
-                transition: 'all 0.2s ease'
-              }}
-            />
-            <Select.Content
-              style={{
-                borderRadius: '12px',
-                border: '1px solid var(--slate-6)',
-                boxShadow: 'var(--shadow-lg)',
-                backgroundColor: 'white'
-              }}
-            >
-              {options.map((option) => (
+      <Box>
+        <Select.Root value={value} onValueChange={handleSelectChange}>
+          <Select.Trigger 
+            placeholder={placeholder}
+            style={{ 
+              width: '100%',
+              padding: '0.875rem 1rem',
+              borderRadius: '10px',
+              border: '1px solid var(--slate-6)',
+              backgroundColor: 'white',
+              boxShadow: 'var(--shadow-sm)',
+              transition: 'all 0.2s ease'
+            }}
+          />
+          <Select.Content
+            style={{
+              zIndex: 1000,
+              minWidth: '200px',
+              maxHeight: '350px',
+              borderRadius: '12px',
+              border: '1px solid var(--slate-6)',
+              boxShadow: 'var(--shadow-lg)',
+              backgroundColor: 'white',
+              padding: '8px'
+            }}
+          >
+            {/* ช่องค้นหา */}
+            <Box style={{ padding: '8px 4px 12px 4px', borderBottom: '1px solid var(--slate-4)', marginBottom: '8px' }}>
+              <TextField.Root
+                placeholder="ค้นหา..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: '100%',
+                  fontSize: '14px'
+                }}
+              >
+                <TextField.Slot>
+                  <MagnifyingGlassIcon height="16" width="16" />
+                </TextField.Slot>
+              </TextField.Root>
+            </Box>
+
+            {/* รายการตัวเลือกที่กรองแล้ว */}
+            {filteredOptions.length === 0 ? (
+              <Select.Item value="no-data" disabled style={{ 
+                padding: '0.75rem 1rem',
+                color: 'var(--slate-9)',
+                fontStyle: 'italic'
+              }}>
+                {searchTerm ? `ไม่พบข้อมูลที่ค้นหา "${searchTerm}"` : 'ไม่มีข้อมูลให้เลือก'}
+              </Select.Item>
+            ) : (
+              filteredOptions.map((option) => (
                 <Select.Item 
                   key={option.value} 
                   value={option.value}
@@ -78,46 +114,18 @@ export const FormSelect: React.FC<FormSelectProps> = ({
                     padding: '0.75rem 1rem',
                     borderRadius: '8px',
                     margin: '2px',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    lineHeight: '1.4'
                   }}
                 >
                   {option.label}
                 </Select.Item>
-              ))}
-            </Select.Content>
-          </Select.Root>
-        </Box>
-        
-        {allowAddNew && onAddNew && (
-          <Button
-            type="button"
-            size="3"
-            variant="outline"
-            style={{
-              borderRadius: '10px',
-              borderColor: 'var(--blue-6)',
-              color: 'var(--blue-9)',
-              backgroundColor: 'var(--blue-2)',
-              transition: 'all 0.2s ease',
-              padding: '0.875rem'
-            }}
-            onClick={onAddNew}
-            title={`เพิ่ม${label}ใหม่`}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--blue-3)';
-              e.currentTarget.style.borderColor = 'var(--blue-8)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--blue-2)';
-              e.currentTarget.style.borderColor = 'var(--blue-6)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-          >
-            <PlusIcon width="16" height="16" />
-          </Button>
-        )}
-      </Flex>
+              ))
+            )}
+          </Select.Content>
+        </Select.Root>
+      </Box>
     </Box>
   );
 };

@@ -8,7 +8,7 @@ export interface CertificateDetails {
   customerName: string;
   deliveryDate: string;
   productItems: string;
-  batchNumber: string;
+  batchNumber: string[]; // เปลี่ยนเป็น array สำหรับ multi-tag
   certificateNumber: string;
   issueDate: string;
 }

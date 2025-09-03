@@ -82,8 +82,8 @@ export interface Certificate {
   
   // Product Information
   productItems: string;
-  batchNumberId: string;
-  batchNumber: string;
+  batchNumbers: string[]; // เปลี่ยนเป็น array สำหรับ multi-tag
+  batchNumber?: string; // เก็บไว้เพื่อ backward compatibility
   
   // Dates
   deliveryDate: Date;
@@ -125,6 +125,6 @@ export const COLLECTIONS = {
   CUSTOMERS: 'customers', 
   PROJECTS: 'projects',
   PRODUCTS: 'products',
-  BATCH_NUMBERS: 'batchNumbers',
+  BATCH_NUMBERS: 'batch_numbers',
   CERTIFICATES: 'certificates',
 } as const;

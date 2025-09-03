@@ -10,6 +10,7 @@
     "restart": "lsof -ti:3600 | xargs kill -9 2>/dev/null || true && npm run dev"
   },
   "dependencies": {
+    "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-form": "^0.1.8",

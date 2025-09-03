@@ -31,6 +31,8 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
 
   return (
     <Box 
+      role="navigation"
+      aria-label="เมนูหลัก"
       style={{ 
         width: isCollapsed ? '80px' : '320px',
         background: 'linear-gradient(135deg, var(--slate-12) 0%, var(--slate-11) 100%)',
@@ -69,6 +71,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
           <Button
             variant="ghost"
             size="1"
+            aria-label={isCollapsed ? "ขยายเมนู" : "ย่อเมนู"}
             style={{
               color: 'white',
               padding: '6px',
@@ -152,6 +155,8 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
               <Button
                 variant="ghost"
                 size="3"
+                aria-label={item.label}
+                aria-current={isActive ? "page" : undefined}
                 style={{
                   width: '100%',
                   justifyContent: isCollapsed ? 'center' : 'flex-start',

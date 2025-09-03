@@ -3,11 +3,8 @@ import { FirestoreService } from '../services/firestoreService';
 import { Company, Customer, Project, Product, BatchNumber } from '../types/firestore';
 import {
   Button,
-  Dialog,
   Flex,
   Text,
-  TextField,
-  Select,
   Card,
   Heading,
   Table,
@@ -16,6 +13,7 @@ import {
   Container,
   Section
 } from '@radix-ui/themes';
+import * as AlertDialog from '@radix-ui/react-alert-dialog';
 
 interface DataManagementRadixProps {
   dataType: 'companies' | 'customers' | 'projects' | 'products' | 'batches';
@@ -27,6 +25,9 @@ export const DataManagementRadix: React.FC<DataManagementRadixProps> = ({ dataTy
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
   const [formData, setFormData] = useState<any>({});
+  const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
+  const [isDeleteItemDialogOpen, setIsDeleteItemDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<any | null>(null);
 
   useEffect(() => {
     loadData();
@@ -128,6 +129,57 @@ export const DataManagementRadix: React.FC<DataManagementRadixProps> = ({ dataTy
     }
   };
 
+  // ลบรายการข้อมูลทั้งหมด
+  const handleDeleteAll = async () => {
+    try {
+      // ลูปลบข้อมูลทั้งหมดในหมวดหมู่นั้นๆ
+      for (const item of data) {
+        await FirestoreService.deleteDocument(getCollectionName(), item.id);
+      }
+      
+      setIsDeleteAllDialogOpen(false);
+      loadData(); // รีเฟรชข้อมูล
+      alert(`ลบข้อมูล${getDataTypeLabel()}ทั้งหมดเรียบร้อยแล้ว`);
+    } catch (error) {
+      console.error('Error deleting all data:', error);
+      alert('เกิดข้อผิดพลาดในการลบข้อมูล');
+    }
+  };
+
+  // ลบรายการข้อมูลแต่ละตัว
+  const handleDeleteItem = async () => {
+    if (!itemToDelete) return;
+    
+    try {
+      await FirestoreService.deleteDocument(getCollectionName(), itemToDelete.id);
+      setIsDeleteItemDialogOpen(false);
+      setItemToDelete(null);
+      loadData(); // รีเฟรชข้อมูล
+      alert(`ลบข้อมูล${getDataTypeLabel()}เรียบร้อยแล้ว`);
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      alert('เกิดข้อผิดพลาดในการลบข้อมูล');
+    }
+  };
+
+  // เปิดหน้าต่างยืนยันการลบรายการแต่ละตัว
+  const confirmDeleteItem = (item: any) => {
+    setItemToDelete(item);
+    setIsDeleteItemDialogOpen(true);
+  };
+
+  // รับชื่อ collection ตามประเภทข้อมูล
+  const getCollectionName = () => {
+    switch (dataType) {
+      case 'companies': return 'companies';
+      case 'customers': return 'customers';
+      case 'projects': return 'projects';
+      case 'products': return 'products';
+      case 'batches': return 'batch_numbers';
+      default: return '';
+    }
+  };
+
   const getDataTypeLabel = () => {
     switch (dataType) {
       case 'companies': return 'บริษัท';
@@ -143,65 +195,114 @@ export const DataManagementRadix: React.FC<DataManagementRadixProps> = ({ dataTy
     const fields = getFormFields();
     
     return (
-      <Flex direction="column" gap="4">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {fields.map((field) => (
-          <Box key={field.key}>
-            <Text as="label" size="2" weight="medium" htmlFor={field.key}>
+          <div key={field.key}>
+            <label 
+              htmlFor={field.key}
+              style={{
+                display: 'block',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                marginBottom: '0.5rem',
+                color: 'var(--gray-11)'
+              }}
+            >
               {field.label}
-            </Text>
+            </label>
             {field.type === 'textarea' ? (
-              <TextField.Root>
-                <TextField.Input
-                  id={field.key}
-                  value={formData[field.key] || ''}
-                  onChange={(e) => setFormData({...formData, [field.key]: e.target.value})}
-                />
-              </TextField.Root>
-            ) : field.type === 'number' ? (
-              <TextField.Root>
-                <TextField.Input
-                  id={field.key}
-                  type="number"
-                  value={formData[field.key] || ''}
-                  onChange={(e) => setFormData({...formData, [field.key]: e.target.value})}
-                />
-              </TextField.Root>
-            ) : field.type === 'date' ? (
-              <TextField.Root>
-                <TextField.Input
-                  id={field.key}
-                  type="date"
-                  value={formData[field.key] ? new Date(formData[field.key]).toISOString().split('T')[0] : ''}
-                  onChange={(e) => setFormData({...formData, [field.key]: new Date(e.target.value)})}
-                />
-              </TextField.Root>
-            ) : field.type === 'select' ? (
-              <Select.Root
+              <textarea
+                id={field.key}
                 value={formData[field.key] || ''}
-                onValueChange={(value) => setFormData({...formData, [field.key]: value})}
-              >
-                <Select.Trigger placeholder={`เลือก${field.label}...`} />
-                <Select.Content>
-                  {field.options?.map((option) => (
-                    <Select.Item key={option.value} value={option.value}>
-                      {option.label}
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
-            ) : (
-              <TextField.Root>
-                <TextField.Input
+                onChange={(e) => setFormData({...formData, [field.key]: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid var(--gray-6)',
+                  borderRadius: '4px',
+                  backgroundColor: 'white',
+                  fontSize: '1rem',
+                  fontFamily: 'inherit',
+                  minHeight: '80px',
+                  resize: 'vertical'
+                }}
+              />
+            ) : field.type === 'number' ? (
+              <input
+                id={field.key}
+                type="number"
+                value={formData[field.key] || ''}
+                onChange={(e) => setFormData({...formData, [field.key]: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid var(--gray-6)',
+                  borderRadius: '4px',
+                  backgroundColor: 'white',
+                  fontSize: '1rem',
+                  fontFamily: 'inherit'
+                }}
+              />
+            ) : field.type === 'date' ? (
+              <input
+                id={field.key}
+                type="date"
+                value={formData[field.key] ? new Date(formData[field.key]).toISOString().split('T')[0] : ''}
+                onChange={(e) => setFormData({...formData, [field.key]: new Date(e.target.value)})}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid var(--gray-6)',
+                  borderRadius: '4px',
+                  backgroundColor: 'white',
+                  fontSize: '1rem',
+                  fontFamily: 'inherit'
+                }}
+              />
+            ) : field.type === 'select' ? (
+              <div>
+                <select
                   id={field.key}
-                  type="text"
                   value={formData[field.key] || ''}
                   onChange={(e) => setFormData({...formData, [field.key]: e.target.value})}
-                />
-              </TextField.Root>
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-6)',
+                    borderRadius: '4px',
+                    backgroundColor: 'white',
+                    fontSize: '1rem',
+                    fontFamily: 'inherit'
+                  }}
+                >
+                  <option value="">{`เลือก${field.label}...`}</option>
+                  {field.options?.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <input
+                id={field.key}
+                type="text"
+                value={formData[field.key] || ''}
+                onChange={(e) => setFormData({...formData, [field.key]: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid var(--gray-6)',
+                  borderRadius: '4px',
+                  backgroundColor: 'white',
+                  fontSize: '1rem',
+                  fontFamily: 'inherit'
+                }}
+              />
             )}
-          </Box>
+          </div>
         ))}
-      </Flex>
+      </div>
     );
   };
 
@@ -325,36 +426,119 @@ export const DataManagementRadix: React.FC<DataManagementRadixProps> = ({ dataTy
           <Text color="gray">เพิ่ม แก้ไข และจัดการข้อมูล{getDataTypeLabel()}</Text>
         </Box>
         
-        <Dialog.Root open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <Dialog.Trigger>
-            <Button onClick={handleAdd}>
-              + เพิ่ม{getDataTypeLabel()}
-            </Button>
-          </Dialog.Trigger>
-          
-          <Dialog.Content maxWidth="450px">
-            <Dialog.Title>
-              {editingItem ? 'แก้ไข' : 'เพิ่ม'}{getDataTypeLabel()}
-            </Dialog.Title>
-            <Dialog.Description size="2" mb="4">
-              กรอกข้อมูล{getDataTypeLabel()}ในฟอร์มด้านล่าง
-            </Dialog.Description>
-            
-            {renderFormFields()}
-            
+        <Flex gap="3" align="center">
+          {data.length > 0 && (
+            <AlertDialog.Root open={isDeleteAllDialogOpen} onOpenChange={setIsDeleteAllDialogOpen}>
+              <AlertDialog.Trigger asChild>
+                <Button variant="soft" color="red">
+                  🗑️ ลบทั้งหมด ({data.length})
+                </Button>
+              </AlertDialog.Trigger>
+              <AlertDialog.Portal>
+                <AlertDialog.Overlay className="AlertDialogOverlay" />
+                <AlertDialog.Content className="AlertDialogContent">
+                  <AlertDialog.Title className="AlertDialogTitle">ยืนยันการลบข้อมูลทั้งหมด</AlertDialog.Title>
+                  <AlertDialog.Description className="AlertDialogDescription">
+                    คุณแน่ใจหรือไม่ที่จะลบข้อมูล{getDataTypeLabel()}ทั้งหมด {data.length} รายการ? การกระทำนี้ไม่สามารถยกเลิกได้
+                  </AlertDialog.Description>
+
+                  <Flex gap="3" mt="4" justify="end">
+                    <AlertDialog.Cancel asChild>
+                      <Button variant="soft" color="gray">
+                        ยกเลิก
+                      </Button>
+                    </AlertDialog.Cancel>
+                    <AlertDialog.Action asChild>
+                      <Button variant="solid" color="red" onClick={handleDeleteAll}>
+                        ลบทั้งหมด
+                      </Button>
+                    </AlertDialog.Action>
+                  </Flex>
+                </AlertDialog.Content>
+              </AlertDialog.Portal>
+            </AlertDialog.Root>
+          )}
+
+          <Button onClick={handleAdd}>
+            + เพิ่ม{getDataTypeLabel()}
+          </Button>
+
+          {isDialogOpen && (
+            <div 
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000
+              }}
+              onClick={() => setIsDialogOpen(false)}
+            >
+              <div 
+                style={{
+                  backgroundColor: 'white',
+                  borderRadius: '8px',
+                  padding: '2rem',
+                  maxWidth: '450px',
+                  width: '90%',
+                  maxHeight: '80vh',
+                  overflow: 'auto'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Heading size="5" mb="2">
+                  {editingItem ? 'แก้ไข' : 'เพิ่ม'}{getDataTypeLabel()}
+                </Heading>
+                <Text size="2" mb="4" color="gray">
+                  กรอกข้อมูล{getDataTypeLabel()}ในฟอร์มด้านล่าง
+                </Text>
+                
+                {renderFormFields()}
+                
+                <Flex gap="3" mt="4" justify="end">
+                  <Button variant="soft" color="gray" onClick={() => setIsDialogOpen(false)}>
+                    ยกเลิก
+                  </Button>
+                  <Button onClick={handleSave}>
+                    บันทึก
+                  </Button>
+                </Flex>
+              </div>
+            </div>
+          )}
+        </Flex>
+      </Flex>
+
+      {/* Dialog สำหรับยืนยันการลบรายการแต่ละตัว */}
+      <AlertDialog.Root open={isDeleteItemDialogOpen} onOpenChange={setIsDeleteItemDialogOpen}>
+        <AlertDialog.Portal>
+          <AlertDialog.Overlay className="AlertDialogOverlay" />
+          <AlertDialog.Content className="AlertDialogContent">
+            <AlertDialog.Title className="AlertDialogTitle">ยืนยันการลบรายการ</AlertDialog.Title>
+            <AlertDialog.Description className="AlertDialogDescription">
+              คุณแน่ใจหรือไม่ที่จะลบ{getDataTypeLabel()}: {itemToDelete?.name || itemToDelete?.batchNumber}? การกระทำนี้ไม่สามารถยกเลิกได้
+            </AlertDialog.Description>
+
             <Flex gap="3" mt="4" justify="end">
-              <Dialog.Close>
-                <Button variant="soft" color="gray" onClick={() => setIsDialogOpen(false)}>
+              <AlertDialog.Cancel asChild>
+                <Button variant="soft" color="gray">
                   ยกเลิก
                 </Button>
-              </Dialog.Close>
-              <Button onClick={handleSave}>
-                บันทึก
-              </Button>
+              </AlertDialog.Cancel>
+              <AlertDialog.Action asChild>
+                <Button variant="solid" color="red" onClick={handleDeleteItem}>
+                  ลบ
+                </Button>
+              </AlertDialog.Action>
             </Flex>
-          </Dialog.Content>
-        </Dialog.Root>
-      </Flex>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
 
       <Card>
         <Table.Root>
@@ -376,13 +560,23 @@ export const DataManagementRadix: React.FC<DataManagementRadixProps> = ({ dataTy
                   </Table.Cell>
                 ))}
                 <Table.Cell>
-                  <Button
-                    variant="soft"
-                    size="2"
-                    onClick={() => handleEdit(item)}
-                  >
-                    แก้ไข
-                  </Button>
+                  <Flex gap="2">
+                    <Button
+                      variant="soft"
+                      size="2"
+                      onClick={() => handleEdit(item)}
+                    >
+                      ✏️ แก้ไข
+                    </Button>
+                    <Button
+                      variant="soft"
+                      color="red"
+                      size="2"
+                      onClick={() => confirmDeleteItem(item)}
+                    >
+                      🗑️ ลบ
+                    </Button>
+                  </Flex>
                 </Table.Cell>
               </Table.Row>
             ))}

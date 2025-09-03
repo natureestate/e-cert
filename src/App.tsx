@@ -19,7 +19,7 @@ interface FormData {
   customerId: string;
   projectId: string;
   productId: string;
-  batchNumberId: string;
+  batchNumbers: string[]; // เปลี่ยนเป็น array สำหรับ multi-tag
   deliveryDate: string;
   additionalNotes: string;
 }
@@ -34,7 +34,7 @@ const App: React.FC = () => {
     customerId: '',
     projectId: '',
     productId: '',
-    batchNumberId: '',
+    batchNumbers: [], // เปลี่ยนเป็น array เปล่า
     deliveryDate: '',
     additionalNotes: '',
   });
@@ -45,6 +45,19 @@ const App: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [warrantyTerms, setWarrantyTerms] = useState<WarrantyTerms>(defaultWarrantyTerms);
   const [viewingCertificate, setViewingCertificate] = useState<Certificate | null>(null);
+
+  // Initialize default data when app loads
+  useEffect(() => {
+    const initializeData = async () => {
+      try {
+        await FirestoreService.initializeDefaultData();
+      } catch (error) {
+        console.error('Error initializing default data:', error);
+      }
+    };
+    
+    initializeData();
+  }, []);
 
   // State สำหรับข้อมูลที่ดึงมาจาก Firestore
   const [relatedData, setRelatedData] = useState<{
@@ -63,14 +76,30 @@ const App: React.FC = () => {
 
   // ตรวจสอบว่าแบบฟอร์มกรอกครบหรือไม่
   const isFormValid = useMemo(() => {
-    const requiredFields = ['companyId', 'customerId', 'projectId', 'productId', 'batchNumberId', 'deliveryDate'];
-    return requiredFields.every(field => formData[field as keyof FormData].trim() !== '');
+    const requiredStringFields = ['companyId', 'customerId', 'projectId', 'productId', 'deliveryDate'];
+    const stringFieldsValid = requiredStringFields.every(field => {
+      const value = formData[field as keyof FormData];
+      return typeof value === 'string' && value.trim() !== '';
+    });
+    
+    // ตรวจสอบ batchNumbers array ต้องมีอย่างน้อย 1 รายการ
+    const batchNumbersValid = formData.batchNumbers.length > 0;
+    
+    return stringFieldsValid && batchNumbersValid;
   }, [formData]);
 
   // จัดการการเปลี่ยนแปลงในแบบฟอร์ม
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // จัดการการเปลี่ยนแปลง batch numbers (multi-tag)
+  const handleBatchNumbersChange = (name: string, value: string[]) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   // โหลดข้อมูลที่เกี่ยวข้องจาก Firestore เมื่อ form data เปลี่ยน
@@ -112,13 +141,7 @@ const App: React.FC = () => {
           );
         }
 
-        if (formData.batchNumberId) {
-          promises.push(
-            FirestoreService.getBatchNumbers().then(batches => {
-              newRelatedData.batchNumber = batches.find(b => b.id === formData.batchNumberId) || null;
-            })
-          );
-        }
+        // ไม่ต้องโหลด batch data เพราะใช้ multi-tag input แล้ว
 
         await Promise.all(promises);
         setRelatedData(newRelatedData);
@@ -127,10 +150,77 @@ const App: React.FC = () => {
       }
     };
 
-    if (Object.values(formData).some(value => value.trim() !== '')) {
+    // ตรวจสอบว่ามีข้อมูลในฟอร์มหรือไม่ (ยกเว้น batchNumbers ที่เป็น array)
+    const hasFormData = Object.entries(formData).some(([key, value]) => {
+      if (key === 'batchNumbers') {
+        return Array.isArray(value) && value.length > 0;
+      }
+      return typeof value === 'string' && value.trim() !== '';
+    });
+
+    if (hasFormData) {
       loadRelatedData();
     }
-  }, [formData.companyId, formData.customerId, formData.projectId, formData.productId, formData.batchNumberId]);
+  }, [formData.companyId, formData.customerId, formData.projectId, formData.productId, formData.batchNumbers]);
+
+  // สร้าง preview อัตโนมัติเมื่อข้อมูลครบถ้วน
+  useEffect(() => {
+    const generatePreview = async () => {
+      // ตรวจสอบว่าฟอร์มถูกต้องและมีข้อมูลครบ และไม่ได้อยู่ในโหมดดูเอกสารเก่า
+      if (isFormValid && 
+          relatedData.company && 
+          relatedData.customer && 
+          relatedData.project && 
+          relatedData.product &&
+          !viewingCertificate) {
+        
+        try {
+          // สร้างวันที่ปัจจุบันในรูปแบบไทย
+          const issueDate = new Date().toLocaleDateString('th-TH', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          });
+
+          // สร้างหมายเลขใบรับประกัน (ชั่วคราวสำหรับ preview)
+          const certificateNumber = `PCW-PREVIEW-${Date.now()}`;
+          
+          // แปลงวันที่ส่งมอบเป็นรูปแบบไทย
+          const formattedDeliveryDate = new Date(formData.deliveryDate).toLocaleDateString('th-TH', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          });
+
+          // สร้างข้อมูลใบรับประกัน preview
+          const previewCertificateDetails: CertificateDetails = {
+            companyName: relatedData.company.name,
+            companyAddress: relatedData.company.address,
+            companyPhone: relatedData.company.phone,
+            companyWebsite: relatedData.company.website,
+            projectNameAndLocation: `${relatedData.project.name} - ${relatedData.project.location}`,
+            customerName: relatedData.customer.name,
+            deliveryDate: formattedDeliveryDate,
+            productItems: relatedData.product.name,
+            batchNumber: formData.batchNumbers,
+            certificateNumber,
+            issueDate,
+          };
+          
+          setCertificateDetails(previewCertificateDetails);
+        } catch (error) {
+          console.error('Error generating preview:', error);
+        }
+      } else if (!isFormValid || !relatedData.company || !relatedData.customer || !relatedData.project || !relatedData.product) {
+        // ล้าง preview หากข้อมูลไม่ครบ (ยกเว้นเมื่อดูเอกสารเก่า)
+        if (!viewingCertificate) {
+          setCertificateDetails(null);
+        }
+      }
+    };
+
+    generatePreview();
+  }, [isFormValid, relatedData, formData.batchNumbers, formData.deliveryDate, viewingCertificate]);
 
   // จัดการการอัปโหลดโลโก้
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,73 +235,54 @@ const App: React.FC = () => {
     }
   };
 
-  // สร้างใบรับประกัน
+  // บันทึกใบรับประกันลง Firestore (เปลี่ยนจาก preview เป็นเอกสารจริง)
   const handleGenerate = async () => {
-    if (!isFormValid || !relatedData.company || !relatedData.customer || !relatedData.project || !relatedData.product || !relatedData.batchNumber) {
+    console.log('🔘 กดปุ่มบันทึกใบรับประกัน');
+    console.log('📊 สถานะฟอร์ม:', { isFormValid, relatedData });
+    
+    if (!isFormValid || !relatedData.company || !relatedData.customer || !relatedData.project || !relatedData.product) {
       alert('กรุณากรอกข้อมูลให้ครบถ้วน');
       return;
     }
 
     try {
-      // สร้างวันที่ปัจจุบันในรูปแบบไทย
-      const issueDate = new Date().toLocaleDateString('th-TH', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-
-      // สร้างหมายเลขใบรับประกัน
+      // สร้างหมายเลขใบรับประกันจริง (ไม่ใช่ preview)
       const certificateNumber = `PCW-${Date.now()}`;
       
-      // แปลงวันที่ส่งมอบเป็นรูปแบบไทย
-      const formattedDeliveryDate = new Date(formData.deliveryDate).toLocaleDateString('th-TH', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
+      // อัปเดต certificateDetails ให้ใช้หมายเลขจริง
+      if (certificateDetails) {
+        const finalCertificateDetails = {
+          ...certificateDetails,
+          certificateNumber
+        };
+        setCertificateDetails(finalCertificateDetails);
 
-      // สร้างข้อมูลใบรับประกันใหม่
-      const newCertificateDetails: CertificateDetails = {
-        companyName: relatedData.company.name,
-        companyAddress: relatedData.company.address,
-        companyPhone: relatedData.company.phone,
-        companyWebsite: relatedData.company.website,
-        projectNameAndLocation: `${relatedData.project.name} - ${relatedData.project.location}`,
-        customerName: relatedData.customer.name,
-        deliveryDate: formattedDeliveryDate,
-        productItems: relatedData.product.name,
-        batchNumber: relatedData.batchNumber.batchNumber,
-        certificateNumber,
-        issueDate,
-      };
-      
-      setCertificateDetails(newCertificateDetails);
+        // บันทึกใบรับประกันลง Firestore
+        await FirestoreService.createCertificate({
+          certificateNumber,
+          companyId: formData.companyId,
+          companyName: relatedData.company.name,
+          companyAddress: relatedData.company.address,
+          companyPhone: relatedData.company.phone,
+          companyWebsite: relatedData.company.website,
+          companyLogoUrl: relatedData.company.logoUrl || '', // แก้ไข undefined เป็น empty string
+          customerId: formData.customerId,
+          customerName: relatedData.customer.name,
+          projectId: formData.projectId,
+          projectName: relatedData.project.name,
+          projectLocation: relatedData.project.location,
+          productItems: relatedData.product.name,
+          batchNumbers: formData.batchNumbers,
+          deliveryDate: new Date(formData.deliveryDate),
+          issueDate: new Date(),
+          warrantyExpiration: new Date(Date.now() + (3 * 365 * 24 * 60 * 60 * 1000)), // 3 years
+          status: 'issued',
+          isActive: true,
+        });
 
-      // บันทึกใบรับประกันลง Firestore
-      await FirestoreService.createCertificate({
-        certificateNumber,
-        companyId: formData.companyId,
-        companyName: relatedData.company.name,
-        companyAddress: relatedData.company.address,
-        companyPhone: relatedData.company.phone,
-        companyWebsite: relatedData.company.website,
-        companyLogoUrl: relatedData.company.logoUrl,
-        customerId: formData.customerId,
-        customerName: relatedData.customer.name,
-        projectId: formData.projectId,
-        projectName: relatedData.project.name,
-        projectLocation: relatedData.project.location,
-        productItems: relatedData.product.name,
-        batchNumberId: formData.batchNumberId,
-        batchNumber: relatedData.batchNumber.batchNumber,
-        deliveryDate: new Date(formData.deliveryDate),
-        issueDate: new Date(),
-        warrantyExpiration: new Date(Date.now() + (3 * 365 * 24 * 60 * 60 * 1000)), // 3 years
-        status: 'issued',
-        isActive: true,
-      });
-
-      console.log('Certificate saved to Firestore successfully!');
+        alert('✅ บันทึกใบรับประกันเรียบร้อยแล้ว!');
+        console.log('Certificate saved to Firestore successfully!');
+      }
     } catch (error) {
       console.error('Error generating certificate:', error);
       alert('เกิดข้อผิดพลาดในการสร้างใบรับประกัน');
@@ -220,12 +291,19 @@ const App: React.FC = () => {
 
   // ส่งออกเป็น PDF
   const handleExportPDF = async () => {
-    if (!certificateDetails) return;
+    console.log('🔘 กดปุ่มส่งออก PDF');
+    console.log('📋 certificateDetails:', certificateDetails);
+    
+    if (!certificateDetails) {
+      alert('ไม่พบข้อมูลใบรับประกัน กรุณากรอกข้อมูลให้ครบถ้วนก่อน');
+      return;
+    }
 
     setIsExporting(true);
     try {
       await exportCertificateToPDF(certificateDetails.certificateNumber);
     } catch (error) {
+      console.error('❌ เกิดข้อผิดพลาดในการส่งออก PDF:', error);
       alert((error as Error).message);
     } finally {
       setIsExporting(false);
@@ -243,7 +321,7 @@ const App: React.FC = () => {
       customerName: certificate.customerName,
       deliveryDate: new Date(certificate.deliveryDate).toLocaleDateString('th-TH'),
       productItems: certificate.productItems,
-      batchNumber: certificate.batchNumber,
+      batchNumber: certificate.batchNumbers || (Array.isArray(certificate.batchNumber) ? certificate.batchNumber : [certificate.batchNumber]), // รองรับทั้งแบบเก่าและใหม่
       certificateNumber: certificate.certificateNumber,
       issueDate: new Date(certificate.issueDate).toLocaleDateString('th-TH'),
     };
@@ -272,6 +350,7 @@ const App: React.FC = () => {
             <CertificateForm
               formData={formData}
               onFormChange={handleFormChange}
+              onBatchNumbersChange={handleBatchNumbersChange}
               onLogoChange={handleLogoChange}
               onGenerate={handleGenerate}
               isFormValid={isFormValid}
@@ -328,7 +407,7 @@ const App: React.FC = () => {
       }}>
         <Navigation currentPage={currentPage} onPageChange={setCurrentPage} />
         
-        <Box style={{ flex: 1, overflowY: 'auto' }}>
+        <Box style={{ flex: 1, overflowY: 'auto' }} role="main" aria-label="เนื้อหาหลัก">
           {currentPage === 'create' && (
             <Box 
               style={{ 

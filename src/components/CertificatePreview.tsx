@@ -166,7 +166,11 @@ export const CertificatePreview: React.FC<CertificatePreviewProps> = ({
                       />
                     ) : warrantyTerms.productType}</p>
                     <p><strong>รายการสินค้า:</strong> {certificateDetails.productItems}</p>
-                    <p><strong>หมายเลข Batch:</strong> {certificateDetails.batchNumber}</p>
+                    <p><strong>Lot การผลิต:</strong> {
+                      Array.isArray(certificateDetails.batchNumber) 
+                        ? certificateDetails.batchNumber.join(', ')
+                        : certificateDetails.batchNumber
+                    }</p>
                   </div>
                 </div>
               </div>

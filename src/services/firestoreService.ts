@@ -54,13 +54,15 @@ export class FirestoreService {
   static async getCompanies(): Promise<Company[]> {
     const querySnapshot = await getDocs(
       query(collection(db, COLLECTIONS.COMPANIES), 
-            where('isActive', '==', true),
-            orderBy('name'))
+            where('isActive', '==', true))
     );
-    return querySnapshot.docs.map(doc => convertTimestamp({
+    const companies = querySnapshot.docs.map(doc => convertTimestamp({
       id: doc.id,
       ...doc.data()
     }) as Company);
+    
+    // Sort in memory แทนการใช้ orderBy ใน Firestore
+    return companies.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   static async createCompany(company: Omit<Company, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
@@ -77,13 +79,15 @@ export class FirestoreService {
   static async getCustomers(): Promise<Customer[]> {
     const querySnapshot = await getDocs(
       query(collection(db, COLLECTIONS.CUSTOMERS), 
-            where('isActive', '==', true),
-            orderBy('name'))
+            where('isActive', '==', true))
     );
-    return querySnapshot.docs.map(doc => convertTimestamp({
+    const customers = querySnapshot.docs.map(doc => convertTimestamp({
       id: doc.id,
       ...doc.data()
     }) as Customer);
+    
+    // Sort in memory แทนการใช้ orderBy ใน Firestore
+    return customers.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   static async createCustomer(customer: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
@@ -100,26 +104,30 @@ export class FirestoreService {
   static async getProjects(): Promise<Project[]> {
     const querySnapshot = await getDocs(
       query(collection(db, COLLECTIONS.PROJECTS), 
-            where('isActive', '==', true),
-            orderBy('name'))
+            where('isActive', '==', true))
     );
-    return querySnapshot.docs.map(doc => convertTimestamp({
+    const projects = querySnapshot.docs.map(doc => convertTimestamp({
       id: doc.id,
       ...doc.data()
     }) as Project);
+    
+    // Sort in memory แทนการใช้ orderBy ใน Firestore
+    return projects.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   static async getProjectsByCustomer(customerId: string): Promise<Project[]> {
     const querySnapshot = await getDocs(
       query(collection(db, COLLECTIONS.PROJECTS), 
             where('customerId', '==', customerId),
-            where('isActive', '==', true),
-            orderBy('name'))
+            where('isActive', '==', true))
     );
-    return querySnapshot.docs.map(doc => convertTimestamp({
+    const projects = querySnapshot.docs.map(doc => convertTimestamp({
       id: doc.id,
       ...doc.data()
     }) as Project);
+    
+    // Sort in memory แทนการใช้ orderBy ใน Firestore
+    return projects.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   static async createProject(project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
@@ -136,13 +144,15 @@ export class FirestoreService {
   static async getProducts(): Promise<Product[]> {
     const querySnapshot = await getDocs(
       query(collection(db, COLLECTIONS.PRODUCTS), 
-            where('isActive', '==', true),
-            orderBy('name'))
+            where('isActive', '==', true))
     );
-    return querySnapshot.docs.map(doc => convertTimestamp({
+    const products = querySnapshot.docs.map(doc => convertTimestamp({
       id: doc.id,
       ...doc.data()
     }) as Product);
+    
+    // Sort in memory แทนการใช้ orderBy ใน Firestore
+    return products.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   static async createProduct(product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
@@ -159,13 +169,15 @@ export class FirestoreService {
   static async getBatchNumbers(): Promise<BatchNumber[]> {
     const querySnapshot = await getDocs(
       query(collection(db, COLLECTIONS.BATCH_NUMBERS), 
-            where('isActive', '==', true),
-            orderBy('batchNumber'))
+            where('isActive', '==', true))
     );
-    return querySnapshot.docs.map(doc => convertTimestamp({
+    const batchNumbers = querySnapshot.docs.map(doc => convertTimestamp({
       id: doc.id,
       ...doc.data()
     }) as BatchNumber);
+    
+    // Sort in memory แทนการใช้ orderBy ใน Firestore
+    return batchNumbers.sort((a, b) => a.batchNumber.localeCompare(b.batchNumber));
   }
 
   static async createBatchNumber(batch: Omit<BatchNumber, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
@@ -207,6 +219,12 @@ export class FirestoreService {
       ...updates,
       updatedAt: new Date()
     });
+  }
+
+  // ลบ document ใดๆ จาก collection
+  static async deleteDocument(collectionName: string, documentId: string): Promise<void> {
+    const docRef = doc(db, collectionName, documentId);
+    await deleteDoc(docRef);
   }
 
   // Get dropdown data for forms

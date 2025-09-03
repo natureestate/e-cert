@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Card, Heading, Flex, Text, TextField, Button, Section } from '@radix-ui/themes';
 import { ImageIcon, CheckIcon, PlusIcon } from '@radix-ui/react-icons';
 import { FormSelect } from './FormSelect';
+import { MultiTagInput } from './MultiTagInput';
 import { FirestoreService } from '../services/firestoreService';
 import { FormDropdownData, Company, Customer, Project, Product, BatchNumber } from '../types/firestore';
 
@@ -10,7 +11,7 @@ interface FormData {
   customerId: string;
   projectId: string;
   productId: string;
-  batchNumberId: string;
+  batchNumbers: string[]; // เปลี่ยนเป็น array สำหรับ multi-tag
   deliveryDate: string;
   additionalNotes: string;
 }
@@ -18,6 +19,7 @@ interface FormData {
 interface CertificateFormProps {
   formData: FormData;
   onFormChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+  onBatchNumbersChange: (name: string, value: string[]) => void; // เพิ่ม handler สำหรับ batch numbers
   onLogoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onGenerate: () => void;
   isFormValid: boolean;
@@ -26,6 +28,7 @@ interface CertificateFormProps {
 export const CertificateForm: React.FC<CertificateFormProps> = ({
   formData,
   onFormChange,
+  onBatchNumbersChange,
   onLogoChange,
   onGenerate,
   isFormValid
@@ -44,15 +47,21 @@ export const CertificateForm: React.FC<CertificateFormProps> = ({
   useEffect(() => {
     const loadDropdownData = async () => {
       try {
+        console.log('🔄 กำลังโหลดข้อมูล dropdown...');
+        
         // Initialize default data if needed
         await FirestoreService.initializeDefaultData();
         
         // Load dropdown options
         const data = await FirestoreService.getFormDropdownData();
+        console.log('📊 ข้อมูล dropdown ที่โหลดได้:', data);
+        
         setDropdownData(data);
         setFilteredProjects(data.projects);
+        
+        console.log('✅ โหลดข้อมูลเสร็จแล้ว');
       } catch (error) {
-        console.error('Error loading dropdown data:', error);
+        console.error('❌ Error loading dropdown data:', error);
       } finally {
         setLoading(false);
       }
@@ -178,8 +187,6 @@ export const CertificateForm: React.FC<CertificateFormProps> = ({
         onChange={onFormChange}
         placeholder="เลือกบริษัท..."
         required={true}
-        allowAddNew={true}
-        onAddNew={() => console.log('Add new company')}
       />
 
         <Box my="4" style={{ height: '1px', backgroundColor: 'var(--gray-6)' }} />
@@ -194,8 +201,6 @@ export const CertificateForm: React.FC<CertificateFormProps> = ({
         onChange={onFormChange}
         placeholder="เลือกลูกค้า..."
         required={true}
-        allowAddNew={true}
-        onAddNew={() => console.log('Add new customer')}
       />
 
       {/* Project Selection */}
@@ -208,8 +213,6 @@ export const CertificateForm: React.FC<CertificateFormProps> = ({
         onChange={onFormChange}
         placeholder="เลือกโครงการ..."
         required={true}
-        allowAddNew={true}
-        onAddNew={() => console.log('Add new project')}
       />
 
       {/* Product Selection */}
@@ -222,22 +225,17 @@ export const CertificateForm: React.FC<CertificateFormProps> = ({
         onChange={onFormChange}
         placeholder="เลือกประเภทสินค้า..."
         required={true}
-        allowAddNew={true}
-        onAddNew={() => console.log('Add new product')}
       />
 
-      {/* Batch Number Selection */}
-      <FormSelect
-        id="batchNumberId"
-        name="batchNumberId"
-        label="เลือกหมายเลข Batch"
-        value={formData.batchNumberId}
-        options={dropdownData.batchNumbers}
-        onChange={onFormChange}
-        placeholder="เลือกหมายเลข Batch..."
+      {/* Lot การผลิต - Multi Tag Input */}
+      <MultiTagInput
+        id="batchNumbers"
+        name="batchNumbers"
+        label="Lot การผลิต"
+        value={formData.batchNumbers}
+        onChange={onBatchNumbersChange}
+        placeholder="พิมพ์หมายเลข Lot และกด Enter..."
         required={true}
-        allowAddNew={true}
-        onAddNew={() => console.log('Add new batch number')}
       />
 
         <Box mb="4">
@@ -294,28 +292,42 @@ export const CertificateForm: React.FC<CertificateFormProps> = ({
             background: isFormValid 
               ? 'linear-gradient(135deg, var(--green-9), var(--emerald-9))' 
               : 'var(--gray-6)',
-            border: 'none',
-            boxShadow: isFormValid ? 'var(--shadow-md)' : 'none',
-            transition: 'all 0.2s ease'
+            border: isFormValid ? '2px solid var(--green-11)' : '2px solid var(--gray-7)',
+            boxShadow: isFormValid 
+              ? '0 8px 24px rgba(0, 128, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)' 
+              : 'none',
+            transition: 'all 0.3s ease',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            color: isFormValid ? 'white' : 'var(--gray-10)',
+            padding: '1.2rem 2rem',
+            minHeight: '60px'
           }}
           onClick={onGenerate} 
           disabled={!isFormValid}
           onMouseEnter={(e) => {
             if (isFormValid) {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
+              e.currentTarget.style.transform = 'translateY(-3px)';
+              e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 128, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+              e.currentTarget.style.background = 'linear-gradient(135deg, var(--green-10), var(--emerald-10))';
             }
           }}
           onMouseLeave={(e) => {
             if (isFormValid) {
               e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 128, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.background = 'linear-gradient(135deg, var(--green-9), var(--emerald-9))';
             }
           }}
         >
-          <Flex align="center" gap="2" justify="center">
-            <CheckIcon width="20" height="20" />
-            <Text size="4" weight="bold">สร้างใบรับประกัน</Text>
+          <Flex align="center" gap="3" justify="center">
+            <CheckIcon width="24" height="24" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }} />
+            <Text size="5" weight="bold" style={{ 
+              textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+              letterSpacing: '0.5px'
+            }}>
+              บันทึกใบรับประกัน
+            </Text>
           </Flex>
         </Button>
       </Card>
