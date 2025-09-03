@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Card, Heading, Flex, Text, Button, Section } from '@radix-ui/themes';
-import { FileIcon, DownloadIcon, Pencil1Icon, CheckIcon, Cross2Icon } from '@radix-ui/react-icons';
+import { FileIcon, DownloadIcon, Pencil1Icon, CheckIcon, Cross2Icon, ReloadIcon } from '@radix-ui/react-icons';
 import { CertificateDetails, WarrantyTerms, defaultWarrantyTerms } from '../types/certificate';
 
 interface CertificatePreviewProps {
@@ -11,6 +11,7 @@ interface CertificatePreviewProps {
   warrantyTerms?: WarrantyTerms;
   onWarrantyTermsChange?: (terms: WarrantyTerms) => void;
   editable?: boolean;
+  onRefreshPreview?: () => void;
 }
 
 export const CertificatePreview: React.FC<CertificatePreviewProps> = ({
@@ -20,7 +21,8 @@ export const CertificatePreview: React.FC<CertificatePreviewProps> = ({
   isExporting,
   warrantyTerms = defaultWarrantyTerms,
   onWarrantyTermsChange,
-  editable = false
+  editable = false,
+  onRefreshPreview
 }) => {
   const [isEditingTerms, setIsEditingTerms] = useState(false);
   const [editTerms, setEditTerms] = useState<WarrantyTerms>(warrantyTerms);
@@ -55,6 +57,24 @@ export const CertificatePreview: React.FC<CertificatePreviewProps> = ({
         <Heading as="h2" size="6" style={{ color: 'var(--green-11)' }}>
           ตัวอย่างใบรับประกัน
         </Heading>
+        {onRefreshPreview && (
+          <Button
+            variant="soft"
+            size="2"
+            onClick={onRefreshPreview}
+            style={{
+              backgroundColor: 'var(--green-3)',
+              color: 'var(--green-11)',
+              border: '1px solid var(--green-6)',
+              borderRadius: '8px'
+            }}
+          >
+            <Flex align="center" gap="1">
+              <ReloadIcon width="14" height="14" />
+              <Text size="2">รีเฟรช</Text>
+            </Flex>
+          </Button>
+        )}
       </Flex>
       
       {certificateDetails ? (

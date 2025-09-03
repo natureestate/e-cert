@@ -208,6 +208,8 @@ const App: React.FC = () => {
             additionalNotes: formData.additionalNotes, // เพิ่มหมายเหตุเพิ่มเติม
           };
           
+          console.log('🔄 อัปเดต preview - additionalNotes:', formData.additionalNotes);
+          
           setCertificateDetails(previewCertificateDetails);
         } catch (error) {
           console.error('Error generating preview:', error);
@@ -221,7 +223,7 @@ const App: React.FC = () => {
     };
 
     generatePreview();
-  }, [isFormValid, relatedData, formData.batchNumbers, formData.deliveryDate, viewingCertificate]);
+  }, [isFormValid, relatedData, formData.batchNumbers, formData.deliveryDate, formData.additionalNotes, viewingCertificate]);
 
   // จัดการการอัปโหลดโลโก้
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -289,6 +291,54 @@ const App: React.FC = () => {
       console.error('Error generating certificate:', error);
       alert('เกิดข้อผิดพลาดในการสร้างใบรับประกัน');
     }
+  };
+
+  // รีเฟรช preview
+  const handleRefreshPreview = () => {
+    console.log('🔄 รีเฟรช preview - formData:', formData);
+    // Force re-render โดยการ clear และสร้างใหม่
+    setCertificateDetails(null);
+    setTimeout(() => {
+      // Trigger useEffect ใหม่ด้วยการเปลี่ยน dependency
+      if (isFormValid && relatedData.company && relatedData.customer && relatedData.project && relatedData.product) {
+        const generatePreviewNow = async () => {
+          try {
+            const issueDate = new Date().toLocaleDateString('th-TH', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            });
+            const certificateNumber = `PCW-PREVIEW-${Date.now()}`;
+            const formattedDeliveryDate = new Date(formData.deliveryDate).toLocaleDateString('th-TH', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            });
+
+            const previewCertificateDetails: CertificateDetails = {
+              companyName: relatedData.company.name,
+              companyAddress: relatedData.company.address,
+              companyPhone: relatedData.company.phone,
+              companyWebsite: relatedData.company.website,
+              projectNameAndLocation: `${relatedData.project.name} - ${relatedData.project.location}`,
+              customerName: relatedData.customer.name,
+              deliveryDate: formattedDeliveryDate,
+              productItems: relatedData.product.name,
+              batchNumber: formData.batchNumbers,
+              certificateNumber,
+              issueDate,
+              additionalNotes: formData.additionalNotes,
+            };
+            
+            console.log('🔄 รีเฟรช preview เรียบร้อย - additionalNotes:', formData.additionalNotes);
+            setCertificateDetails(previewCertificateDetails);
+          } catch (error) {
+            console.error('Error refreshing preview:', error);
+          }
+        };
+        generatePreviewNow();
+      }
+    }, 100);
   };
 
   // ส่งออกเป็น PDF
@@ -367,6 +417,7 @@ const App: React.FC = () => {
               warrantyTerms={warrantyTerms}
               onWarrantyTermsChange={setWarrantyTerms}
               editable={!viewingCertificate} // Only editable when creating new certificate
+              onRefreshPreview={!viewingCertificate ? handleRefreshPreview : undefined} // เฉพาะเมื่อสร้างใหม่
             />
           </Flex>
         );
