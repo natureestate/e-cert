@@ -11,6 +11,7 @@ export interface CertificateDetails {
   batchNumber: string[]; // เปลี่ยนเป็น array สำหรับ multi-tag
   certificateNumber: string;
   issueDate: string;
+  additionalNotes: string; // เพิ่มหมายเหตุเพิ่มเติม
 }
 
 // Warranty Terms Configuration

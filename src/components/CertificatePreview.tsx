@@ -272,6 +272,9 @@ export const CertificatePreview: React.FC<CertificatePreviewProps> = ({
                       className="edit-input"
                     />
                   ) : warrantyTerms.footerNote}</p>
+                  {certificateDetails.additionalNotes && (
+                    <p><strong>หมายเหตุเพิ่มเติม:</strong> {certificateDetails.additionalNotes}</p>
+                  )}
                   <p><strong>{isEditingTerms ? (
                     <input
                       type="text"

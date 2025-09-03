@@ -84,7 +84,8 @@ export interface Certificate {
   productItems: string;
   batchNumbers: string[]; // เปลี่ยนเป็น array สำหรับ multi-tag
   batchNumber?: string; // เก็บไว้เพื่อ backward compatibility
-  
+  additionalNotes?: string; // หมายเหตุเพิ่มเติม
+
   // Dates
   deliveryDate: Date;
   issueDate: Date;

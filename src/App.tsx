@@ -205,6 +205,7 @@ const App: React.FC = () => {
             batchNumber: formData.batchNumbers,
             certificateNumber,
             issueDate,
+            additionalNotes: formData.additionalNotes, // เพิ่มหมายเหตุเพิ่มเติม
           };
           
           setCertificateDetails(previewCertificateDetails);
@@ -273,6 +274,7 @@ const App: React.FC = () => {
           projectLocation: relatedData.project.location,
           productItems: relatedData.product.name,
           batchNumbers: formData.batchNumbers,
+          additionalNotes: formData.additionalNotes, // เพิ่มหมายเหตุเพิ่มเติม
           deliveryDate: new Date(formData.deliveryDate),
           issueDate: new Date(),
           warrantyExpiration: new Date(Date.now() + (3 * 365 * 24 * 60 * 60 * 1000)), // 3 years
@@ -324,6 +326,7 @@ const App: React.FC = () => {
       batchNumber: certificate.batchNumbers || (Array.isArray(certificate.batchNumber) ? certificate.batchNumber : [certificate.batchNumber]), // รองรับทั้งแบบเก่าและใหม่
       certificateNumber: certificate.certificateNumber,
       issueDate: new Date(certificate.issueDate).toLocaleDateString('th-TH'),
+      additionalNotes: certificate.additionalNotes || '', // เพิ่มหมายเหตุเพิ่มเติม
     };
     
     setCertificateDetails(certDetails);
