@@ -53,7 +53,7 @@ export const DataManagement: React.FC<DataManagementProps> = ({ dataType }) => {
       case 'companies':
         return { name: '', address: '', phone: '', website: '', isActive: true };
       case 'customers':
-        return { name: '', phone: '', email: '', address: '', isActive: true };
+        return { name: '', phone: '', email: '', address: '', buyer: '', isActive: true };
       case 'projects':
         return { name: '', location: '', customerId: '', customerName: '', description: '', isActive: true };
       case 'products':
@@ -187,6 +187,7 @@ export const DataManagement: React.FC<DataManagementProps> = ({ dataType }) => {
           { key: 'phone', label: 'เบอร์โทรศัพท์', type: 'text' },
           { key: 'email', label: 'อีเมล', type: 'text' },
           { key: 'address', label: 'ที่อยู่', type: 'textarea' },
+          { key: 'buyer', label: 'ผู้ซื้อสินค้า', type: 'text' },
         ];
       case 'projects':
         return [
@@ -231,7 +232,7 @@ export const DataManagement: React.FC<DataManagementProps> = ({ dataType }) => {
       case 'companies':
         return ['ชื่อบริษัท', 'ที่อยู่', 'เบอร์โทรศัพท์', 'เว็บไซต์', 'สถานะ', 'การจัดการ'];
       case 'customers':
-        return ['ชื่อลูกค้า', 'เบอร์โทรศัพท์', 'อีเมล', 'สถานะ', 'การจัดการ'];
+        return ['ชื่อลูกค้า', 'เบอร์โทรศัพท์', 'อีเมล', 'ผู้ซื้อสินค้า', 'สถานะ', 'การจัดการ'];
       case 'projects':
         return ['ชื่อโครงการ', 'สถานที่', 'ลูกค้า', 'สถานะ', 'การจัดการ'];
       case 'products':
@@ -258,6 +259,7 @@ export const DataManagement: React.FC<DataManagementProps> = ({ dataType }) => {
           item.name,
           item.phone,
           item.email,
+          item.buyer || '-',
           item.isActive ? 'ใช้งาน' : 'ไม่ใช้งาน'
         ];
       case 'projects':

@@ -30,6 +30,7 @@ interface CertificateFormProps {
   onLogoSizeChange: (size: 'small' | 'medium' | 'large') => void; // เพิ่ม handler สำหรับขนาดโลโก้
   onRemoveLogo: () => void; // เพิ่ม handler สำหรับลบโลโก้
   onSelectLogoFromGallery?: (logoInfo: any) => void; // เพิ่ม handler สำหรับเลือกโลโก้จาก gallery
+  isViewingMode?: boolean; // เพิ่ม prop เพื่อซ่อนปุ่มบันทึกเมื่อดูจากประวัติ
 }
 
 export const CertificateForm: React.FC<CertificateFormProps> = ({
@@ -44,7 +45,8 @@ export const CertificateForm: React.FC<CertificateFormProps> = ({
   logoSize,
   onLogoSizeChange,
   onRemoveLogo,
-  onSelectLogoFromGallery
+  onSelectLogoFromGallery,
+  isViewingMode = false
 }) => {
   const [dropdownData, setDropdownData] = useState<FormDropdownData>({
     companies: [],
@@ -538,52 +540,69 @@ export const CertificateForm: React.FC<CertificateFormProps> = ({
           />
         </Box>
 
-        <Button 
-          size="4"
-          style={{ 
-            width: '100%', 
-            marginTop: '2rem',
-            background: isFormValid 
-              ? 'linear-gradient(135deg, var(--green-9), var(--emerald-9))' 
-              : 'var(--gray-6)',
-            border: isFormValid ? '2px solid var(--green-11)' : '2px solid var(--gray-7)',
-            boxShadow: isFormValid 
-              ? '0 8px 24px rgba(0, 128, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)' 
-              : 'none',
-            transition: 'all 0.3s ease',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            color: isFormValid ? 'white' : 'var(--gray-10)',
-            padding: '1.2rem 2rem',
-            minHeight: '60px'
-          }}
-          onClick={onGenerate} 
-          disabled={!isFormValid}
-          onMouseEnter={(e) => {
-            if (isFormValid) {
-              e.currentTarget.style.transform = 'translateY(-3px)';
-              e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 128, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
-              e.currentTarget.style.background = 'linear-gradient(135deg, var(--green-10), var(--emerald-10))';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (isFormValid) {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 128, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
-              e.currentTarget.style.background = 'linear-gradient(135deg, var(--green-9), var(--emerald-9))';
-            }
-          }}
-        >
-          <Flex align="center" gap="3" justify="center">
-            <CheckIcon width="24" height="24" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }} />
-            <Text size="5" weight="bold" style={{ 
-              textShadow: '0 1px 2px rgba(0,0,0,0.3)',
-              letterSpacing: '0.5px'
-            }}>
-              บันทึกใบรับประกัน
+        {/* แสดงปุ่มบันทึกเฉพาะเมื่อไม่ได้อยู่ในโหมดดูจากประวัติ */}
+        {!isViewingMode && (
+          <Button 
+            size="4"
+            style={{ 
+              width: '100%', 
+              marginTop: '2rem',
+              background: isFormValid 
+                ? 'linear-gradient(135deg, var(--green-9), var(--emerald-9))' 
+                : 'var(--gray-6)',
+              border: isFormValid ? '2px solid var(--green-11)' : '2px solid var(--gray-7)',
+              boxShadow: isFormValid 
+                ? '0 8px 24px rgba(0, 128, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)' 
+                : 'none',
+              transition: 'all 0.3s ease',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              color: isFormValid ? 'white' : 'var(--gray-10)',
+              padding: '1.2rem 2rem',
+              minHeight: '60px'
+            }}
+            onClick={onGenerate} 
+            disabled={!isFormValid}
+            onMouseEnter={(e) => {
+              if (isFormValid) {
+                e.currentTarget.style.transform = 'translateY(-3px)';
+                e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 128, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+                e.currentTarget.style.background = 'linear-gradient(135deg, var(--green-10), var(--emerald-10))';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (isFormValid) {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 128, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+                e.currentTarget.style.background = 'linear-gradient(135deg, var(--green-9), var(--emerald-9))';
+              }
+            }}
+          >
+            <Flex align="center" gap="3" justify="center">
+              <CheckIcon width="24" height="24" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }} />
+              <Text size="5" weight="bold" style={{ 
+                textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                letterSpacing: '0.5px'
+              }}>
+                บันทึกใบรับประกัน
+              </Text>
+            </Flex>
+          </Button>
+        )}
+
+        {/* แสดงข้อความแจ้งเตือนเมื่ออยู่ในโหมดดูจากประวัติ */}
+        {isViewingMode && (
+          <Box mt="2rem" p="4" style={{
+            backgroundColor: 'var(--yellow-2)',
+            border: '1px solid var(--yellow-6)',
+            borderRadius: '8px',
+            textAlign: 'center'
+          }}>
+            <Text color="yellow" size="3" weight="medium">
+              📋 กำลังดูใบรับประกันจากประวัติ - ไม่สามารถแก้ไขหรือบันทึกใหม่ได้
             </Text>
-          </Flex>
-        </Button>
+          </Box>
+        )}
 
         {/* Logo Gallery Modal */}
         {showLogoGallery && (

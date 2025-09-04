@@ -6,6 +6,7 @@ export interface CertificateDetails {
   companyWebsite: string;
   projectNameAndLocation: string;
   customerName: string;
+  buyer?: string; // ผู้ซื้อสินค้า
   deliveryDate: string;
   productItems: string;
   batchNumber: string[]; // เปลี่ยนเป็น array สำหรับ multi-tag

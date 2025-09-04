@@ -227,6 +227,7 @@ const App: React.FC = () => {
             companyWebsite: relatedData.company.website,
             projectNameAndLocation: `${relatedData.project.name} - ${relatedData.project.location}`,
             customerName: relatedData.customer.name,
+            buyer: relatedData.customer.buyer, // เพิ่มผู้ซื้อสินค้า
             deliveryDate: formattedDeliveryDate,
             productItems: relatedData.product.name,
             batchNumber: formData.batchNumbers,
@@ -349,7 +350,13 @@ const App: React.FC = () => {
   // บันทึกใบรับประกันลง Firestore (เปลี่ยนจาก preview เป็นเอกสารจริง)
   const handleGenerate = async () => {
     console.log('🔘 กดปุ่มบันทึกใบรับประกัน');
-    console.log('📊 สถานะฟอร์ม:', { isFormValid, relatedData });
+    console.log('📊 สถานะฟอร์ม:', { isFormValid, relatedData, viewingCertificate });
+    
+    // ป้องกันการบันทึกใหม่เมื่อกำลังดูใบรับประกันจากประวัติ
+    if (viewingCertificate) {
+      alert('กำลังดูใบรับประกันจากประวัติ ไม่สามารถบันทึกใหม่ได้\nกรุณากดปุ่ม "สร้างใหม่" หากต้องการสร้างใบรับประกันใหม่');
+      return;
+    }
     
     if (!isFormValid || !relatedData.company || !relatedData.customer || !relatedData.project || !relatedData.product) {
       alert('กรุณากรอกข้อมูลให้ครบถ้วน');
@@ -379,6 +386,7 @@ const App: React.FC = () => {
           companyLogoUrl: relatedData.company.logoUrl || '', // แก้ไข undefined เป็น empty string
           customerId: formData.customerId,
           customerName: relatedData.customer.name,
+          buyer: relatedData.customer.buyer, // เพิ่มผู้ซื้อสินค้า
           projectId: formData.projectId,
           projectName: relatedData.project.name,
           projectLocation: relatedData.project.location,
@@ -430,6 +438,7 @@ const App: React.FC = () => {
               companyWebsite: relatedData.company.website,
               projectNameAndLocation: `${relatedData.project.name} - ${relatedData.project.location}`,
               customerName: relatedData.customer.name,
+              buyer: relatedData.customer.buyer, // เพิ่มผู้ซื้อสินค้า
               deliveryDate: formattedDeliveryDate,
               productItems: relatedData.product.name,
               batchNumber: formData.batchNumbers,
@@ -500,6 +509,7 @@ const App: React.FC = () => {
       companyWebsite: certificate.companyWebsite,
       projectNameAndLocation: `${certificate.projectName} - ${certificate.projectLocation}`,
       customerName: certificate.customerName,
+      buyer: certificate.buyer, // เพิ่มผู้ซื้อสินค้า
       deliveryDate: new Date(certificate.deliveryDate).toLocaleDateString('th-TH'),
       productItems: certificate.productItems,
       batchNumber: certificate.batchNumbers || (Array.isArray(certificate.batchNumber) ? certificate.batchNumber : [certificate.batchNumber]), // รองรับทั้งแบบเก่าและใหม่
@@ -542,6 +552,7 @@ const App: React.FC = () => {
               onLogoSizeChange={handleLogoSizeChange}
               onRemoveLogo={handleRemoveLogo}
               onSelectLogoFromGallery={handleSelectLogoFromGallery}
+              isViewingMode={!!viewingCertificate}
             />
             
             <CertificatePreview

@@ -284,6 +284,7 @@ export class FirestoreService {
         name: 'คุณสมชาย รักบ้าน',
         phone: '081-234-5678',
         email: 'somchai@email.com',
+        buyer: 'นายสมชาย ใจดี',
         isActive: true
       });
 
@@ -291,6 +292,7 @@ export class FirestoreService {
         name: 'คุณสมหญิง สร้างบ้าน',
         phone: '089-765-4321',
         email: 'somying@email.com',
+        buyer: 'นางสาวสมหญิง สวยงาม',
         isActive: true
       });
 

@@ -18,6 +18,7 @@ export interface Customer {
   phone?: string;
   email?: string;
   address?: string;
+  buyer?: string; // ผู้ซื้อสินค้า
   projects?: string[]; // Array of project IDs
   isActive: boolean;
   createdAt: Date;
@@ -76,6 +77,7 @@ export interface Certificate {
   // Customer & Project Information
   customerId: string;
   customerName: string;
+  buyer?: string; // ผู้ซื้อสินค้า
   projectId: string;
   projectName: string;
   projectLocation: string;

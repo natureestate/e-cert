@@ -185,6 +185,9 @@ export const CertificatePreview: React.FC<CertificatePreviewProps> = ({
                     <h5 className="cert-section-title">ข้อมูลโครงการ</h5>
                     <p><strong>ชื่อโครงการ:</strong> {certificateDetails.projectNameAndLocation}</p>
                     <p><strong>ชื่อลูกค้า:</strong> {certificateDetails.customerName}</p>
+                    {certificateDetails.buyer && (
+                      <p><strong>ผู้ซื้อสินค้า:</strong> {certificateDetails.buyer}</p>
+                    )}
                     <p><strong>วันที่ส่งมอบ:</strong> {certificateDetails.deliveryDate}</p>
                   </div>
                 </div>

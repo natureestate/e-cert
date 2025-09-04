@@ -33,6 +33,7 @@ export const CertificateHistory: React.FC<CertificateHistoryProps> = ({ onViewCe
     const matchesSearch = 
       cert.certificateNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       cert.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (cert.buyer && cert.buyer.toLowerCase().includes(searchTerm.toLowerCase())) ||
       cert.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       cert.projectName.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -97,7 +98,7 @@ export const CertificateHistory: React.FC<CertificateHistoryProps> = ({ onViewCe
       <Flex gap="4" mb="6" direction={{ initial: 'column', sm: 'row' }} align="end">
         <Box style={{ flex: 1 }}>
           <TextField.Root
-            placeholder="ค้นหาด้วยเลขที่ใบรับประกัน, ชื่อลูกค้า, บริษัท, หรือโครงการ..."
+            placeholder="ค้นหาด้วยเลขที่ใบรับประกัน, ชื่อลูกค้า, ผู้ซื้อสินค้า, บริษัท, หรือโครงการ..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             size="3"
@@ -165,6 +166,9 @@ export const CertificateHistory: React.FC<CertificateHistoryProps> = ({ onViewCe
                 <Box mb="3">
                   <Text size="2" color="gray" mb="1"><strong>บริษัท:</strong> {certificate.companyName}</Text>
                   <Text size="2" color="gray" mb="1"><strong>ลูกค้า:</strong> {certificate.customerName}</Text>
+                  {certificate.buyer && (
+                    <Text size="2" color="gray" mb="1"><strong>ผู้ซื้อสินค้า:</strong> {certificate.buyer}</Text>
+                  )}
                   <Text size="2" color="gray" mb="1"><strong>โครงการ:</strong> {certificate.projectName}</Text>
                   <Text size="2" color="gray" mb="1"><strong>สินค้า:</strong> {certificate.productItems}</Text>
                 </Box>
