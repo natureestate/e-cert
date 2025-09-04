@@ -5,6 +5,9 @@ import { CertificateForm } from './components/CertificateForm';
 import { CertificatePreview } from './components/CertificatePreview';
 import { CertificateHistory } from './components/CertificateHistory';
 import { DataManagementRadix } from './components/DataManagementRadix';
+import { WorkDeliveryHouse } from './components/WorkDeliveryHouse';
+import { WorkDeliveryPrecast } from './components/WorkDeliveryPrecast';
+import { WorkDeliveryHistory } from './components/WorkDeliveryHistory';
 import { CertificateDetails, WarrantyTerms, defaultWarrantyTerms } from './types/certificate';
 import { exportCertificateToPDF } from './utils/pdfGenerator';
 import { printCertificate } from './utils/printUtils';
@@ -585,6 +588,15 @@ const App: React.FC = () => {
       
       case 'products':
         return <DataManagementRadix dataType="products" />;
+      
+      case 'work-delivery-house':
+        return <WorkDeliveryHouse />;
+      
+      case 'work-delivery-precast':
+        return <WorkDeliveryPrecast />;
+      
+      case 'work-delivery-history':
+        return <WorkDeliveryHistory />;
       
       default:
         return (

@@ -358,4 +358,35 @@ export class FirestoreService {
       console.error('Error creating default data:', error);
     }
   }
+
+  // Work Deliveries
+  static async getWorkDeliveries(): Promise<any[]> {
+    const querySnapshot = await getDocs(
+      query(collection(db, COLLECTIONS.WORK_DELIVERIES), 
+            where('isActive', '==', true),
+            orderBy('createdAt', 'desc'))
+    );
+    return querySnapshot.docs.map(doc => convertTimestamp({
+      id: doc.id,
+      ...doc.data()
+    }));
+  }
+
+  static async createWorkDelivery(delivery: any): Promise<string> {
+    const now = new Date();
+    const docRef = await addDoc(collection(db, COLLECTIONS.WORK_DELIVERIES), {
+      ...delivery,
+      createdAt: now,
+      updatedAt: now
+    });
+    return docRef.id;
+  }
+
+  static async updateWorkDelivery(id: string, updates: any): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.WORK_DELIVERIES, id);
+    await updateDoc(docRef, {
+      ...updates,
+      updatedAt: new Date()
+    });
+  }
 }

@@ -9,7 +9,11 @@ import {
   CubeIcon,
   DashboardIcon,
   HamburgerMenuIcon,
-  Cross1Icon
+  Cross1Icon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ClipboardIcon,
+  BarChartIcon
 } from '@radix-ui/react-icons';
 
 interface NavigationProps {
@@ -17,17 +21,76 @@ interface NavigationProps {
   onPageChange: (page: string) => void;
 }
 
+// นิยามประเภทเมนู
+interface MenuItem {
+  id: string;
+  label: string;
+  icon: any;
+  color: string;
+  group?: string;
+}
+
+interface MenuGroup {
+  id: string;
+  label: string;
+  icon: any;
+  color: string;
+  items: MenuItem[];
+  isExpanded: boolean;
+}
+
 export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChange }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  
-  const menuItems = [
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
+    certificates: true,
+    workDelivery: false,
+    dataManagement: false,
+  });
+
+  // เมนูแบบเดี่ยว (ไม่ได้อยู่ในกลุ่ม)
+  const singleMenuItems: MenuItem[] = [
     { id: 'create', label: 'สร้างใบรับประกัน', icon: FileTextIcon, color: 'emerald' },
     { id: 'history', label: 'ประวัติใบรับประกัน', icon: ArchiveIcon, color: 'blue' },
-    { id: 'companies', label: 'จัดการบริษัท', icon: HomeIcon, color: 'purple' },
-    { id: 'customers', label: 'จัดการลูกค้า', icon: PersonIcon, color: 'orange' },
-    { id: 'projects', label: 'จัดการโครงการ', icon: RocketIcon, color: 'indigo' },
-    { id: 'products', label: 'จัดการสินค้า', icon: CubeIcon, color: 'pink' },
-  ] as const;
+  ];
+
+  // กลุ่มเมนูใบส่งมอบงวดงาน
+  const workDeliveryGroup: MenuGroup = {
+    id: 'workDelivery',
+    label: 'ใบส่งมอบงวดงาน',
+    icon: ClipboardIcon,
+    color: 'green',
+    isExpanded: expandedGroups.workDelivery,
+    items: [
+      { id: 'work-delivery-house', label: 'ส่งมอบงานรับสร้างบ้าน', icon: HomeIcon, color: 'green' },
+      { id: 'work-delivery-precast', label: 'ส่งมอบงาน Precast Concrete', icon: CubeIcon, color: 'green' },
+      { id: 'work-delivery-history', label: 'ประวัติใบส่งมอบงาน', icon: ArchiveIcon, color: 'green' },
+    ]
+  };
+
+  // กลุ่มเมนูการจัดการข้อมูล
+  const dataManagementGroup: MenuGroup = {
+    id: 'dataManagement',
+    label: 'จัดการข้อมูล',
+    icon: BarChartIcon,
+    color: 'purple',
+    isExpanded: expandedGroups.dataManagement,
+    items: [
+      { id: 'companies', label: 'จัดการบริษัท', icon: HomeIcon, color: 'purple' },
+      { id: 'customers', label: 'จัดการลูกค้า', icon: PersonIcon, color: 'purple' },
+      { id: 'projects', label: 'จัดการโครงการ', icon: RocketIcon, color: 'purple' },
+      { id: 'products', label: 'จัดการสินค้า', icon: CubeIcon, color: 'purple' },
+    ]
+  };
+
+  const menuGroups = [workDeliveryGroup, dataManagementGroup];
+
+  // ฟังก์ชันสำหรับ toggle กลุ่มเมนู
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [groupId]: !prev[groupId]
+    }));
+  };
 
   return (
     <Box 
@@ -146,7 +209,8 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
       
       {/* Menu Items */}
       <Box px={isCollapsed ? "2" : "3"} py="2" style={{ position: 'relative', zIndex: 1 }}>
-        {menuItems.map((item) => {
+        {/* เมนูแบบเดี่ยว */}
+        {singleMenuItems.map((item) => {
           const IconComponent = item.icon;
           const isActive = currentPage === item.id;
           
@@ -254,6 +318,197 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
                   </Flex>
                 )}
               </Button>
+            </Box>
+          );
+        })}
+
+        {/* กลุ่มเมนู */}
+        {menuGroups.map((group) => {
+          const GroupIconComponent = group.icon;
+          const isGroupActive = group.items.some(item => currentPage === item.id);
+          
+          return (
+            <Box key={group.id} mb="2">
+              {/* ปุ่มหัวข้อกลุ่ม */}
+              <Button
+                variant="ghost"
+                size="3"
+                aria-label={group.label}
+                style={{
+                  width: '100%',
+                  justifyContent: isCollapsed ? 'center' : 'flex-start',
+                  padding: isCollapsed ? '0.875rem 0.5rem' : '0.875rem 1rem',
+                  borderRadius: '12px',
+                  backgroundColor: isGroupActive 
+                    ? 'rgba(255,255,255,0.1)' 
+                    : 'transparent',
+                  color: 'white',
+                  fontWeight: '500',
+                  border: '1px solid transparent',
+                  transition: 'all 0.2s ease',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onClick={() => {
+                  if (!isCollapsed) {
+                    toggleGroup(group.id);
+                  }
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)';
+                }}
+                onMouseLeave={(e) => {
+                  if (!isGroupActive) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  } else {
+                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                  }
+                }}
+                title={isCollapsed ? group.label : undefined}
+              >
+                {isCollapsed ? (
+                  <Box
+                    style={{
+                      padding: '6px',
+                      borderRadius: '8px',
+                      backgroundColor: isGroupActive 
+                        ? `var(--${group.color}-9)` 
+                        : 'rgba(255,255,255,0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <GroupIconComponent width="18" height="18" color="white" />
+                  </Box>
+                ) : (
+                  <Flex align="center" gap="2" style={{ width: '100%' }}>
+                    <Box
+                      style={{
+                        padding: '6px',
+                        borderRadius: '8px',
+                        backgroundColor: isGroupActive 
+                          ? `var(--${group.color}-9)` 
+                          : 'rgba(255,255,255,0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s ease',
+                        flexShrink: 0
+                      }}
+                    >
+                      <GroupIconComponent width="18" height="18" color="white" />
+                    </Box>
+                    <Text size="3" style={{ flex: 1, textAlign: 'left' }}>
+                      {group.label}
+                    </Text>
+                    <Box style={{ flexShrink: 0 }}>
+                      {group.isExpanded ? (
+                        <ChevronDownIcon width="16" height="16" color="white" />
+                      ) : (
+                        <ChevronRightIcon width="16" height="16" color="white" />
+                      )}
+                    </Box>
+                  </Flex>
+                )}
+              </Button>
+
+              {/* รายการย่อยในกลุ่ม (แสดงเฉพาะเมื่อขยาย) */}
+              {!isCollapsed && group.isExpanded && (
+                <Box ml="3" mt="1">
+                  {group.items.map((item) => {
+                    const ItemIconComponent = item.icon;
+                    const isActive = currentPage === item.id;
+                    
+                    return (
+                      <Box key={item.id} mb="1">
+                        <Button
+                          variant="ghost"
+                          size="2"
+                          aria-label={item.label}
+                          aria-current={isActive ? "page" : undefined}
+                          style={{
+                            width: '100%',
+                            justifyContent: 'flex-start',
+                            padding: '0.75rem 1rem',
+                            borderRadius: '8px',
+                            backgroundColor: isActive 
+                              ? 'rgba(255,255,255,0.15)' 
+                              : 'transparent',
+                            color: 'white',
+                            fontWeight: isActive ? '600' : '400',
+                            border: isActive ? '1px solid rgba(255,255,255,0.2)' : '1px solid transparent',
+                            transition: 'all 0.2s ease',
+                            position: 'relative',
+                            overflow: 'hidden'
+                          }}
+                          onClick={() => onPageChange(item.id)}
+                          onMouseEnter={(e) => {
+                            if (!isActive) {
+                              e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)';
+                              e.currentTarget.style.transform = 'translateX(4px)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isActive) {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                              e.currentTarget.style.transform = 'translateX(0)';
+                            }
+                          }}
+                        >
+                          {isActive && (
+                            <Box
+                              style={{
+                                position: 'absolute',
+                                left: 0,
+                                top: 0,
+                                bottom: 0,
+                                width: '3px',
+                                background: `linear-gradient(135deg, var(--${item.color}-9), var(--${item.color}-7))`,
+                                borderRadius: '0 2px 2px 0'
+                              }}
+                            />
+                          )}
+                          
+                          <Flex align="center" gap="2" style={{ width: '100%' }}>
+                            <Box
+                              style={{
+                                padding: '4px',
+                                borderRadius: '6px',
+                                backgroundColor: isActive 
+                                  ? `var(--${item.color}-9)` 
+                                  : 'rgba(255,255,255,0.1)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.2s ease',
+                                flexShrink: 0
+                              }}
+                            >
+                              <ItemIconComponent width="14" height="14" color="white" />
+                            </Box>
+                            <Text size="2" style={{ flex: 1, textAlign: 'left' }}>
+                              {item.label}
+                            </Text>
+                            {isActive && (
+                              <Box
+                                style={{
+                                  width: '4px',
+                                  height: '4px',
+                                  borderRadius: '50%',
+                                  backgroundColor: `var(--${item.color}-9)`,
+                                  flexShrink: 0
+                                }}
+                              />
+                            )}
+                          </Flex>
+                        </Button>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              )}
             </Box>
           );
         })}
