@@ -119,14 +119,14 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
   }
 
   return (
-    <Card style={{ padding: '2rem', flex: 1 }}>
+    <Card className="work-delivery-form" style={{ padding: '2rem', flex: 1 }}>
       <Heading as="h2" size="6" mb="4">
         {isViewingMode ? 'รายละเอียดใบส่งมอบงวดงาน' : 'สร้างใบส่งมอบงวดงาน'}
       </Heading>
 
       <Box mb="6">
-        <Flex direction="column" gap="4">
-          {/* ข้อมูลพื้นฐาน */}
+        <Flex direction="column" gap="5">
+          {/* ข้อมูลพื้นฐาน - แถวที่ 1 */}
           <Flex direction={{ initial: 'column', md: 'row' }} gap="4">
             <Box style={{ flex: 1 }}>
               <FormSelect
@@ -139,7 +139,7 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
                 disabled={isViewingMode}
               />
             </Box>
-            
+
             <Box style={{ flex: 1 }}>
               <FormSelect
                 label="ลูกค้า *"
@@ -153,6 +153,7 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
             </Box>
           </Flex>
 
+          {/* ข้อมูลโครงการและงาน - แถวที่ 2 */}
           <Flex direction={{ initial: 'column', md: 'row' }} gap="4">
             <Box style={{ flex: 1 }}>
               <FormSelect
@@ -165,7 +166,7 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
                 disabled={isViewingMode || !formData.customerId}
               />
             </Box>
-            
+
             <Box style={{ flex: 1 }}>
               <Text as="label" size="2" weight="medium" mb="2" style={{ display: 'block' }}>
                 ประเภทงาน *
@@ -175,8 +176,15 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
                 onValueChange={handleWorkTypeChange}
                 disabled={isViewingMode}
               >
-                <Select.Trigger style={{ width: '100%' }} placeholder="เลือกประเภทงาน" />
-                <Select.Content>
+                <Select.Trigger
+                  style={{
+                    width: '100%',
+                    zIndex: 1000,
+                    position: 'relative'
+                  }}
+                  placeholder="เลือกประเภทงาน"
+                />
+                <Select.Content style={{ zIndex: 1001 }}>
                   {workTypeOptions.map(option => (
                     <Select.Item key={option.value} value={option.value}>
                       {option.label}
@@ -187,49 +195,59 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
             </Box>
           </Flex>
 
-          {/* ตัวเลือกประเภทอาคาร (แสดงเฉพาะงานรับสร้างบ้าน) */}
-          {formData.workType === 'house-construction' && (
-            <Box>
+          {/* วันที่ส่งมอบ + ประเภทอาคาร รวมกัน */}
+          <Flex direction={{ initial: 'column', md: 'row' }} gap="4">
+            <Box style={{ flex: 1 }}>
               <Text as="label" size="2" weight="medium" mb="2" style={{ display: 'block' }}>
-                ประเภทอาคาร *
+                วันที่ส่งมอบ *
               </Text>
-              <Select.Root
-                value={formData.buildingType || ''}
-                onValueChange={handleBuildingTypeChange}
+              <input
+                type="date"
+                name="deliveryDate"
+                value={formData.deliveryDate}
+                onChange={onFormChange}
                 disabled={isViewingMode}
-              >
-                <Select.Trigger style={{ width: '100%' }} placeholder="เลือกประเภทอาคาร" />
-                <Select.Content>
-                  {buildingTypeOptions.map(option => (
-                    <Select.Item key={option.value} value={option.value}>
-                      {option.label}
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
+                style={{
+                  width: '100%',
+                  padding: '0.5rem',
+                  borderRadius: '6px',
+                  border: '1px solid var(--gray-7)',
+                  fontSize: '14px',
+                  height: '36px'
+                }}
+              />
             </Box>
-          )}
 
-          {/* วันที่ส่งมอบ */}
-          <Box>
-            <Text as="label" size="2" weight="medium" mb="2" style={{ display: 'block' }}>
-              วันที่ส่งมอบ *
-            </Text>
-            <input
-              type="date"
-              name="deliveryDate"
-              value={formData.deliveryDate}
-              onChange={onFormChange}
-              disabled={isViewingMode}
-              style={{
-                width: '100%',
-                padding: '0.5rem',
-                borderRadius: '6px',
-                border: '1px solid var(--gray-7)',
-                fontSize: '14px'
-              }}
-            />
-          </Box>
+            {/* ตัวเลือกประเภทอาคาร (แสดงเฉพาะงานรับสร้างบ้าน) */}
+            {formData.workType === 'house-construction' && (
+              <Box style={{ flex: 1 }}>
+                <Text as="label" size="2" weight="medium" mb="2" style={{ display: 'block' }}>
+                  ประเภทอาคาร *
+                </Text>
+                <Select.Root
+                  value={formData.buildingType || ''}
+                  onValueChange={handleBuildingTypeChange}
+                  disabled={isViewingMode}
+                >
+                  <Select.Trigger
+                    style={{
+                      width: '100%',
+                      zIndex: 1000,
+                      position: 'relative'
+                    }}
+                    placeholder="เลือกประเภทอาคาร"
+                  />
+                  <Select.Content style={{ zIndex: 1001 }}>
+                    {buildingTypeOptions.map(option => (
+                      <Select.Item key={option.value} value={option.value}>
+                        {option.label}
+                      </Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Root>
+              </Box>
+            )}
+          </Flex>
 
           {/* หมายเหตุเพิ่มเติม */}
           <Box>
@@ -275,7 +293,7 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
                         fontWeight: 'bold'
                       }}
                     >
-                      {phase.phaseNumber}
+                      {index + 1}
                     </Box>
                     <Box>
                       <Text weight="medium" size="3">

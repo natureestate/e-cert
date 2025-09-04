@@ -1148,3 +1148,23 @@ h1 {
 .pdf-export-mode button {
   display: none !important;
 }
+
+/* Layout fixes for form dropdowns */
+.work-delivery-form .rt-SelectContent {
+  z-index: 1001 !important;
+}
+
+.work-delivery-form .rt-SelectTrigger {
+  z-index: 1000 !important;
+  position: relative;
+}
+
+/* Ensure dropdowns don't get clipped */
+.work-delivery-form {
+  overflow: visible !important;
+}
+
+.work-delivery-form .rt-Box {
+  position: relative;
+  z-index: 1;
+}
