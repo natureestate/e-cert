@@ -126,9 +126,9 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
 
       <Box mb="6">
         <Flex direction="column" gap="5">
-          {/* ข้อมูลพื้นฐาน - แถวที่ 1 */}
-          <Flex direction={{ initial: 'column', md: 'row' }} gap="4">
-            <Box style={{ flex: 1 }}>
+          {/* ข้อมูลทั้งหมดในแถวเดียว */}
+          <Box>
+            <Box mb="4">
               <FormSelect
                 label="บริษัท *"
                 name="companyId"
@@ -140,7 +140,7 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
               />
             </Box>
 
-            <Box style={{ flex: 1 }}>
+            <Box mb="4">
               <FormSelect
                 label="ลูกค้า *"
                 name="customerId"
@@ -151,11 +151,8 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
                 disabled={isViewingMode}
               />
             </Box>
-          </Flex>
 
-          {/* ข้อมูลโครงการและงาน - แถวที่ 2 */}
-          <Flex direction={{ initial: 'column', md: 'row' }} gap="4">
-            <Box style={{ flex: 1 }}>
+            <Box mb="4">
               <FormSelect
                 label="โครงการ *"
                 name="projectId"
@@ -167,7 +164,7 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
               />
             </Box>
 
-            <Box style={{ flex: 1 }}>
+            <Box mb="4">
               <Text as="label" size="2" weight="medium" mb="2" style={{ display: 'block' }}>
                 ประเภทงาน *
               </Text>
@@ -193,11 +190,8 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
                 </Select.Content>
               </Select.Root>
             </Box>
-          </Flex>
 
-          {/* วันที่ส่งมอบ + ประเภทอาคาร รวมกัน */}
-          <Flex direction={{ initial: 'column', md: 'row' }} gap="4">
-            <Box style={{ flex: 1 }}>
+            <Box mb="4">
               <Text as="label" size="2" weight="medium" mb="2" style={{ display: 'block' }}>
                 วันที่ส่งมอบ *
               </Text>
@@ -220,7 +214,7 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
 
             {/* ตัวเลือกประเภทอาคาร (แสดงเฉพาะงานรับสร้างบ้าน) */}
             {formData.workType === 'house-construction' && (
-              <Box style={{ flex: 1 }}>
+              <Box mb="4">
                 <Text as="label" size="2" weight="medium" mb="2" style={{ display: 'block' }}>
                   ประเภทอาคาร *
                 </Text>
@@ -247,7 +241,7 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
                 </Select.Root>
               </Box>
             )}
-          </Flex>
+          </Box>
 
           {/* หมายเหตุเพิ่มเติม */}
           <Box>
