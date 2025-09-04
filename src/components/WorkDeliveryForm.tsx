@@ -56,6 +56,8 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
           FirestoreService.getProjects()
         ]);
         
+        // Data loaded successfully
+        
         setCompanies(companiesData);
         setCustomers(customersData);
         setProjects(projectsData);
@@ -74,6 +76,11 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
     if (formData.customerId) {
       const filtered = projects.filter(p => p.customerId === formData.customerId);
       setFilteredProjects(filtered);
+      
+      // ล้างการเลือกโครงการหากโครงการที่เลือกไว้ไม่ตรงกับลูกค้าใหม่
+      if (formData.projectId && !filtered.some(p => p.id === formData.projectId)) {
+        onFormChange({ target: { name: 'projectId', value: '' } } as any);
+      }
     } else {
       setFilteredProjects(projects);
     }
@@ -154,7 +161,7 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
                 value={formData.projectId}
                 onChange={onFormChange}
                 options={filteredProjects.map(p => ({ value: p.id, label: `${p.name} - ${p.location}` }))}
-                placeholder="เลือกโครงการ"
+                placeholder={formData.customerId ? "เลือกโครงการ" : "กรุณาเลือกลูกค้าก่อน"}
                 disabled={isViewingMode || !formData.customerId}
               />
             </Box>

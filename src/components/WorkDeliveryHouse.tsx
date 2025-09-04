@@ -11,6 +11,8 @@ import {
   defaultHouseConstructionPhases,
   phaseTemplates 
 } from '../types/workDelivery';
+import { exportWorkDeliveryToPDF } from '../utils/pdfGenerator';
+import { printWorkDelivery } from '../utils/printUtils';
 
 interface FormData {
   companyId: string;
@@ -50,6 +52,10 @@ export const WorkDeliveryHouse: React.FC = () => {
     customer: null,
     project: null,
   });
+  
+  // State สำหรับ PDF และ Print
+  const [isExporting, setIsExporting] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   // ตรวจสอบว่าแบบฟอร์มกรอกครบหรือไม่ (สำหรับปุ่มบันทึก)
   const isFormValid = useMemo(() => {
@@ -257,10 +263,15 @@ export const WorkDeliveryHouse: React.FC = () => {
       } else {
         console.log('❌ Preview conditions not met', {
           hasBasicData: formData.companyId && formData.customerId && formData.projectId && formData.deliveryDate,
+          formData: formData,
           company: !!relatedData.company,
+          companyData: relatedData.company,
           customer: !!relatedData.customer,
+          customerData: relatedData.customer,
           project: !!relatedData.project,
-          phases: phases.length
+          projectData: relatedData.project,
+          phases: phases.length,
+          phasesData: phases
         });
         setDeliveryDetails(null);
       }
@@ -269,12 +280,28 @@ export const WorkDeliveryHouse: React.FC = () => {
     generatePreview();
   }, [formData, relatedData, phases]);
 
-  // เริ่มต้นด้วยงวดงานเริ่มต้น
+  // เริ่มต้นด้วยงวดงานเริ่มต้นและตั้งค่าเริ่มต้น
   useEffect(() => {
     if (phases.length === 0) {
+      console.log('🔧 Initializing default phases for house construction');
       setPhases([...defaultHouseConstructionPhases]);
     }
+    
+    // ตั้งค่าเริ่มต้นสำหรับฟอร์ม
+    if (!formData.workType) {
+      console.log('🔧 Setting default work type');
+      setFormData(prev => ({
+        ...prev,
+        workType: 'house-construction',
+        buildingType: 'two-story'
+      }));
+    }
   }, []);
+
+  // Debug formData changes
+  useEffect(() => {
+    console.log('📝 Form data changed:', formData);
+  }, [formData]);
 
   // บันทึกใบส่งมอบงวดงาน
   const handleGenerate = async () => {
@@ -358,16 +385,41 @@ export const WorkDeliveryHouse: React.FC = () => {
     }, 100);
   };
 
-  // ส่งออกเป็น PDF (placeholder)
+  // ฟังก์ชันส่งออก PDF
   const handleExportPDF = async () => {
-    console.log('🔘 กดปุ่มส่งออก PDF สำหรับใบส่งมอบงานรับสร้างบ้าน');
-    alert('ฟีเจอร์ส่งออก PDF จะเพิ่มในขั้นตอนถัดไป');
+    if (!deliveryDetails) {
+      alert('กรุณากรอกข้อมูลให้ครบถ้วนก่อนส่งออก PDF');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      await exportWorkDeliveryToPDF(deliveryDetails.deliveryNumber);
+      alert('ส่งออก PDF สำเร็จ!');
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      alert('เกิดข้อผิดพลาดในการส่งออก PDF: ' + (error as Error).message);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
-  // พิมพ์เอกสาร (placeholder)
+  // ฟังก์ชันพิมพ์
   const handlePrint = async () => {
-    console.log('🔘 กดปุ่มพิมพ์ใบส่งมอบงานรับสร้างบ้าน');
-    window.print();
+    if (!deliveryDetails) {
+      alert('กรุณากรอกข้อมูลให้ครบถ้วนก่อนพิมพ์');
+      return;
+    }
+
+    setIsPrinting(true);
+    try {
+      await printWorkDelivery(deliveryDetails.deliveryNumber);
+    } catch (error) {
+      console.error('Error printing:', error);
+      alert('เกิดข้อผิดพลาดในการพิมพ์: ' + (error as Error).message);
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   return (
@@ -418,8 +470,8 @@ export const WorkDeliveryHouse: React.FC = () => {
           deliveryDetails={deliveryDetails}
           onExportPDF={handleExportPDF}
           onPrint={handlePrint}
-          isExporting={false}
-          isPrinting={false}
+          isExporting={isExporting}
+          isPrinting={isPrinting}
           editable={true}
           onRefreshPreview={handleRefreshPreview}
         />

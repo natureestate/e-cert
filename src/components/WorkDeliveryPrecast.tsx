@@ -11,6 +11,8 @@ import {
   defaultPrecastPhases,
   phaseTemplates 
 } from '../types/workDelivery';
+import { exportWorkDeliveryToPDF } from '../utils/pdfGenerator';
+import { printWorkDelivery } from '../utils/printUtils';
 
 interface FormData {
   companyId: string;
@@ -50,6 +52,10 @@ export const WorkDeliveryPrecast: React.FC = () => {
     customer: null,
     project: null,
   });
+  
+  // State สำหรับ PDF และ Print
+  const [isExporting, setIsExporting] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   // ตรวจสอบว่าแบบฟอร์มกรอกครบหรือไม่
   const isFormValid = useMemo(() => {
@@ -330,16 +336,41 @@ export const WorkDeliveryPrecast: React.FC = () => {
     }, 100);
   };
 
-  // ส่งออกเป็น PDF (placeholder)
+  // ฟังก์ชันส่งออก PDF
   const handleExportPDF = async () => {
-    console.log('🔘 กดปุ่มส่งออก PDF สำหรับใบส่งมอบงาน Precast');
-    alert('ฟีเจอร์ส่งออก PDF จะเพิ่มในขั้นตอนถัดไป');
+    if (!deliveryDetails) {
+      alert('กรุณากรอกข้อมูลให้ครบถ้วนก่อนส่งออก PDF');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      await exportWorkDeliveryToPDF(deliveryDetails.deliveryNumber);
+      alert('ส่งออก PDF สำเร็จ!');
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      alert('เกิดข้อผิดพลาดในการส่งออก PDF: ' + (error as Error).message);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
-  // พิมพ์เอกสาร (placeholder)
+  // ฟังก์ชันพิมพ์
   const handlePrint = async () => {
-    console.log('🔘 กดปุ่มพิมพ์ใบส่งมอบงาน Precast');
-    window.print();
+    if (!deliveryDetails) {
+      alert('กรุณากรอกข้อมูลให้ครบถ้วนก่อนพิมพ์');
+      return;
+    }
+
+    setIsPrinting(true);
+    try {
+      await printWorkDelivery(deliveryDetails.deliveryNumber);
+    } catch (error) {
+      console.error('Error printing:', error);
+      alert('เกิดข้อผิดพลาดในการพิมพ์: ' + (error as Error).message);
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   return (
@@ -390,8 +421,8 @@ export const WorkDeliveryPrecast: React.FC = () => {
           deliveryDetails={deliveryDetails}
           onExportPDF={handleExportPDF}
           onPrint={handlePrint}
-          isExporting={false}
-          isPrinting={false}
+          isExporting={isExporting}
+          isPrinting={isPrinting}
           editable={true}
           onRefreshPreview={handleRefreshPreview}
         />

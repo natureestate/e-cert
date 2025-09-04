@@ -60,6 +60,95 @@ const App: React.FC = () => {
     const initializeData = async () => {
       try {
         await FirestoreService.initializeDefaultData();
+        
+        // ตรวจสอบและสร้างโครงการสำหรับ "คุณทดสอบ เพิ่มข้อมูล" หากยังไม่มี
+        const projects = await FirestoreService.getProjects();
+        const testCustomerId = '3vbYjRC6L3OMbSq2XKDc';
+        const testProjects = projects.filter(p => p.customerId === testCustomerId);
+        
+        if (testProjects.length === 0) {
+          console.log('🔧 Creating projects for test customer...');
+          
+          await FirestoreService.createProject({
+            name: 'โครงการทดสอบ บ้านเดี่ยว',
+            location: '789 ถนนทดสอบ แขวงทดสอบ เขตทดสอบ กรุงเทพฯ 10100',
+            customerId: testCustomerId,
+            customerName: 'คุณทดสอบ เพิ่มข้อมูล',
+            description: 'โครงการทดสอบระบบ',
+            isActive: true
+          });
+          
+          await FirestoreService.createProject({
+            name: 'โครงการทดสอบ บ้านแฝด',
+            location: '321 ถนนทดสอบ2 แขวงทดสอบ2 เขตทดสอบ2 กรุงเทพฯ 10200',
+            customerId: testCustomerId,
+            customerName: 'คุณทดสอบ เพิ่มข้อมูล',
+            description: 'โครงการทดสอบระบบ แบบที่ 2',
+            isActive: true
+          });
+          
+          console.log('✅ Test projects created successfully!');
+        }
+        
+        // Add reset function to global scope for debugging
+        (window as any).resetFirebaseData = async () => {
+          console.log('🔄 Resetting Firebase data...');
+          await FirestoreService.initializeDefaultData(true);
+          window.location.reload();
+        };
+
+        // Add debug functions for data management
+        (window as any).checkFirebaseData = async () => {
+          console.log('📊 Checking Firebase data...');
+          const companies = await FirestoreService.getCompanies();
+          const customers = await FirestoreService.getCustomers();
+          const projects = await FirestoreService.getProjects();
+          
+          console.log('Companies:', companies);
+          console.log('Customers:', customers);
+          console.log('Projects:', projects);
+          
+          // Show relationships
+          projects.forEach(project => {
+            const customer = customers.find(c => c.id === project.customerId);
+            console.log(`Project "${project.name}" belongs to customer "${customer?.name || 'NOT FOUND'}" (ID: ${project.customerId})`);
+          });
+        };
+
+        (window as any).createTestData = async () => {
+          console.log('🔧 Creating test data manually...');
+          
+          // Create test customer
+          const customerId = await FirestoreService.createCustomer({
+            name: 'คุณทดสอบ ใหม่',
+            phone: '02-999-8888',
+            email: 'testnew@email.com',
+            buyer: 'นายทดสอบ ใหม่',
+            isActive: true
+          });
+          
+          // Create test projects for this customer
+          await FirestoreService.createProject({
+            name: 'โครงการทดสอบใหม่ A',
+            location: 'ที่อยู่ทดสอบ A',
+            customerId: customerId,
+            customerName: 'คุณทดสอบ ใหม่',
+            description: 'โครงการทดสอบ A',
+            isActive: true
+          });
+          
+          await FirestoreService.createProject({
+            name: 'โครงการทดสอบใหม่ B',
+            location: 'ที่อยู่ทดสอบ B',
+            customerId: customerId,
+            customerName: 'คุณทดสอบ ใหม่',
+            description: 'โครงการทดสอบ B',
+            isActive: true
+          });
+          
+          console.log('✅ Test data created with customer ID:', customerId);
+          window.location.reload();
+        };
       } catch (error) {
         console.error('Error initializing default data:', error);
       }

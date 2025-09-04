@@ -275,7 +275,7 @@ export const WorkDeliveryPreview: React.FC<WorkDeliveryPreviewProps> = ({
                 style={{ 
                   padding: '1rem',
                   backgroundColor: phase.isCompleted ? 'var(--green-2)' : 'var(--gray-2)',
-                  border: phase.phaseNumber === deliveryDetails.currentPhase ? '2px solid var(--blue-8)' : '1px solid var(--gray-6)'
+                  border: (index + 1) === deliveryDetails.currentPhase ? '2px solid var(--blue-8)' : '1px solid var(--gray-6)'
                 }}
               >
                 <Flex align="center" gap="3">
@@ -294,15 +294,15 @@ export const WorkDeliveryPreview: React.FC<WorkDeliveryPreviewProps> = ({
                       flexShrink: 0
                     }}
                   >
-                    {phase.isCompleted ? '✓' : phase.phaseNumber}
+                    {phase.isCompleted ? '✓' : (index + 1)}
                   </Box>
                   
                   <Box style={{ flex: 1 }}>
                     <Flex align="center" gap="2" mb="1">
                       <Text weight="medium" size="3">
-                        งวดที่ {phase.phaseNumber}: {phase.name}
+                        งวดที่ {index + 1}: {phase.name}
                       </Text>
-                      {phase.phaseNumber === deliveryDetails.currentPhase && (
+                      {(index + 1) === deliveryDetails.currentPhase && (
                         <Badge color="blue" size="1">ปัจจุบัน</Badge>
                       )}
                       {phase.isCompleted && (

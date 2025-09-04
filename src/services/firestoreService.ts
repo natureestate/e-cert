@@ -258,14 +258,49 @@ export class FirestoreService {
     await deleteObject(storageRef);
   }
 
+  // Clear all data (for reset)
+  static async clearAllData(): Promise<void> {
+    try {
+      console.log('🗑️ Clearing all data...');
+      
+      const [companies, customers, projects, products, batchNumbers, certificates] = await Promise.all([
+        this.getCompanies(),
+        this.getCustomers(),
+        this.getProjects(),
+        this.getProducts(),
+        this.getBatchNumbers(),
+        this.getCertificates()
+      ]);
+
+      // Delete all documents
+      const deletePromises = [
+        ...companies.map(item => this.deleteDocument(COLLECTIONS.COMPANIES, item.id)),
+        ...customers.map(item => this.deleteDocument(COLLECTIONS.CUSTOMERS, item.id)),
+        ...projects.map(item => this.deleteDocument(COLLECTIONS.PROJECTS, item.id)),
+        ...products.map(item => this.deleteDocument(COLLECTIONS.PRODUCTS, item.id)),
+        ...batchNumbers.map(item => this.deleteDocument(COLLECTIONS.BATCH_NUMBERS, item.id)),
+        ...certificates.map(item => this.deleteDocument(COLLECTIONS.CERTIFICATES, item.id))
+      ];
+
+      await Promise.all(deletePromises);
+      console.log('✅ All data cleared');
+    } catch (error) {
+      console.error('Error clearing data:', error);
+    }
+  }
+
   // Initialize default data (เรียกใช้ครั้งแรกเพื่อสร้างข้อมูลตัวอย่าง)
-  static async initializeDefaultData(): Promise<void> {
+  static async initializeDefaultData(force = false): Promise<void> {
     try {
       // Check if data already exists
       const companies = await this.getCompanies();
-      if (companies.length > 0) {
+      if (companies.length > 0 && !force) {
         console.log('Default data already exists');
         return;
+      }
+
+      if (force) {
+        await this.clearAllData();
       }
 
       console.log('Creating default data...');
@@ -296,6 +331,15 @@ export class FirestoreService {
         isActive: true
       });
 
+      // Create additional test customer
+      const customerId3 = await this.createCustomer({
+        name: 'คุณทดสอบ เพิ่มข้อมูล',
+        phone: '02-555-1234',
+        email: 'test@email.com',
+        buyer: 'นายทดสอบ ระบบ',
+        isActive: true
+      });
+
       // Create default projects
       await this.createProject({
         name: 'โครงการหมู่บ้านเจริญสุข',
@@ -312,6 +356,25 @@ export class FirestoreService {
         customerId: customerId2,
         customerName: 'คุณสมหญิง สร้างบ้าน',
         description: 'อาคารสูง 30 ชั้น',
+        isActive: true
+      });
+
+      // Create additional test projects
+      await this.createProject({
+        name: 'โครงการทดสอบ บ้านเดี่ยว',
+        location: '789 ถนนทดสอบ แขวงทดสอบ เขตทดสอบ กรุงเทพฯ 10100',
+        customerId: customerId3,
+        customerName: 'คุณทดสอบ เพิ่มข้อมูล',
+        description: 'โครงการทดสอบระบบ',
+        isActive: true
+      });
+
+      await this.createProject({
+        name: 'โครงการทดสอบ บ้านแฝด',
+        location: '321 ถนนทดสอบ2 แขวงทดสอบ2 เขตทดสอบ2 กรุงเทพฯ 10200',
+        customerId: customerId3,
+        customerName: 'คุณทดสอบ เพิ่มข้อมูล',
+        description: 'โครงการทดสอบระบบ แบบที่ 2',
         isActive: true
       });
 
