@@ -38,6 +38,9 @@ interface WorkDeliveryFormProps {
   onLogoSizeChange?: (size: 'small' | 'medium' | 'large') => void;
   onRemoveLogo?: () => void;
   onSelectLogoFromGallery?: (logoInfo: any) => void;
+  
+  // Preview props
+  onGeneratePreview?: () => void;
 }
 
 export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
@@ -56,7 +59,8 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
   logoSize = 'medium',
   onLogoSizeChange,
   onRemoveLogo,
-  onSelectLogoFromGallery
+  onSelectLogoFromGallery,
+  onGeneratePreview
 }) => {
   // State สำหรับ dropdown options
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -460,6 +464,26 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
       {/* ปุ่มดำเนินการ */}
       {!isViewingMode && (
         <Flex justify="end" gap="3">
+          {/* ปุ่ม Preview */}
+          {onGeneratePreview && (
+            <Button
+              size="3"
+              variant="soft"
+              onClick={onGeneratePreview}
+              disabled={!isFormValid}
+              style={{
+                backgroundColor: isFormValid ? 'var(--blue-9)' : 'var(--gray-6)',
+                color: 'white'
+              }}
+            >
+              <Flex align="center" gap="2">
+                <ImageIcon width="16" height="16" />
+                <Text>Preview</Text>
+              </Flex>
+            </Button>
+          )}
+          
+          {/* ปุ่มบันทึก */}
           <Button
             size="3"
             onClick={onGenerate}

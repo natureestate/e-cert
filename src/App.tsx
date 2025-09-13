@@ -14,7 +14,6 @@ import { WorkDelivery, WorkDeliveryDetails } from './types/workDelivery';
 import { exportCertificateToPDF } from './utils/pdfGenerator';
 import { printCertificate } from './utils/printUtils';
 import { FirestoreService } from './services/firestoreService';
-import { LogoStorageService, LogoInfo } from './services/logoStorageService';
 import { Company, Customer, Project, Product, BatchNumber, Certificate } from './types/firestore';
 import '@radix-ui/themes/styles.css'; // Import Radix Themes CSS
 import './config/firebase'; // Initialize Firebase
@@ -48,9 +47,7 @@ const App: React.FC = () => {
 
   // State สำหรับโลโก้และใบรับประกัน
   const [logoSrc, setLogoSrc] = useState<string | null>(null);
-  const [logoSize, setLogoSize] = useState<'small' | 'medium' | 'large'>('medium'); // เพิ่ม state สำหรับขนาดโลโก้
-  const [logoFileName, setLogoFileName] = useState<string | null>(null); // เพิ่ม state สำหรับชื่อไฟล์โลโก้
-  const [logoInfo, setLogoInfo] = useState<LogoInfo | null>(null); // เพิ่ม state สำหรับข้อมูลโลโก้จาก Storage
+  const [logoSize, setLogoSize] = useState<'small' | 'medium' | 'large'>('medium'); // ขนาดโลโก้ที่ผู้ใช้เลือก
   const [certificateDetails, setCertificateDetails] = useState<CertificateDetails | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false); // เพิ่ม state สำหรับ printing
@@ -164,25 +161,21 @@ const App: React.FC = () => {
     initializeData();
   }, []);
 
-  // โหลดโลโก้ที่เก็บไว้แล้วจาก localStorage เมื่อ app เริ่มต้น
+  // โหลดการตั้งค่าขนาดโลโก้จาก localStorage เมื่อ app เริ่มต้น
   useEffect(() => {
-    const loadSavedLogo = () => {
+    const loadLogoPreferences = () => {
       try {
-        const savedLogoInfo = LogoStorageService.getLogoFromLocalStorage();
-        if (savedLogoInfo) {
-          console.log('🔄 กำลังโหลดโลโก้ที่เก็บไว้...', savedLogoInfo.fileName);
-          setLogoInfo(savedLogoInfo);
-          setLogoSrc(savedLogoInfo.url);
-          setLogoFileName(savedLogoInfo.fileName);
-          setLogoSize(savedLogoInfo.size);
-          console.log('✅ โหลดโลโก้สำเร็จ!');
+        const savedLogoSize = localStorage.getItem('preferredLogoSize') as 'small' | 'medium' | 'large';
+        if (savedLogoSize && ['small', 'medium', 'large'].includes(savedLogoSize)) {
+          setLogoSize(savedLogoSize);
+          console.log('✅ โหลดการตั้งค่าขนาดโลโก้:', savedLogoSize);
         }
       } catch (error) {
-        console.error('❌ เกิดข้อผิดพลาดในการโหลดโลโก้:', error);
+        console.error('❌ เกิดข้อผิดพลาดในการโหลดการตั้งค่าโลโก้:', error);
       }
     };
     
-    loadSavedLogo();
+    loadLogoPreferences();
   }, []);
 
   // State สำหรับข้อมูลที่ดึงมาจาก Firestore
@@ -251,20 +244,10 @@ const App: React.FC = () => {
               // โหลดโลโก้อัตโนมัติเมื่อเลือกบริษัท
               if (selectedCompany?.logoUrl && selectedCompany.logoUrl.trim() !== '') {
                 setLogoSrc(selectedCompany.logoUrl);
-                setLogoFileName('company-logo');
-                setLogoInfo({
-                  url: selectedCompany.logoUrl,
-                  fileName: 'company-logo',
-                  fullPath: '',
-                  size: 'medium',
-                  uploadedAt: new Date()
-                });
                 console.log('🏢 โหลดโลโก้บริษัทอัตโนมัติ:', selectedCompany.logoUrl);
               } else {
                 // ล้างโลโก้หากบริษัทไม่มีโลโก้
                 setLogoSrc(null);
-                setLogoFileName(null);
-                setLogoInfo(null);
                 console.log('🏢 บริษัทไม่มีโลโก้หรือ logoUrl ว่าง:', selectedCompany?.logoUrl);
               }
             })
@@ -272,8 +255,6 @@ const App: React.FC = () => {
         } else {
           // ล้างโลโก้หากไม่ได้เลือกบริษัท
           setLogoSrc(null);
-          setLogoFileName(null);
-          setLogoInfo(null);
         }
 
         if (formData.customerId) {
@@ -322,118 +303,76 @@ const App: React.FC = () => {
     }
   }, [formData.companyId, formData.customerId, formData.projectId, formData.productId, formData.batchNumbers]);
 
-  // สร้าง preview อัตโนมัติเมื่อข้อมูลครบถ้วน
-  useEffect(() => {
-    const generatePreview = async () => {
-      // ตรวจสอบว่าฟอร์มถูกต้องและมีข้อมูลครบ และไม่ได้อยู่ในโหมดดูเอกสารเก่า
-      if (isFormValid && 
-          relatedData.company && 
-          relatedData.customer && 
-          relatedData.project && 
-          relatedData.product &&
-          !viewingCertificate) {
+  // ฟังก์ชันสร้าง preview แบบด้วยตนเอง (ไม่อัตโนมัติ)
+  const generatePreviewManually = async () => {
+    // ตรวจสอบว่าฟอร์มถูกต้องและมีข้อมูลครบ และไม่ได้อยู่ในโหมดดูเอกสารเก่า
+    if (isFormValid && 
+        relatedData.company && 
+        relatedData.customer && 
+        relatedData.project && 
+        relatedData.product &&
+        !viewingCertificate) {
+      
+      try {
+        // สร้างวันที่ปัจจุบันในรูปแบบไทย
+        const issueDate = new Date().toLocaleDateString('th-TH', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+
+        // สร้างหมายเลขใบรับประกัน (ชั่วคราวสำหรับ preview)
+        const certificateNumber = `PCW-PREVIEW-${Date.now()}`;
         
-        try {
-          // สร้างวันที่ปัจจุบันในรูปแบบไทย
-          const issueDate = new Date().toLocaleDateString('th-TH', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          });
+        // แปลงวันที่ส่งมอบเป็นรูปแบบไทย
+        const formattedDeliveryDate = new Date(formData.deliveryDate).toLocaleDateString('th-TH', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
 
-          // สร้างหมายเลขใบรับประกัน (ชั่วคราวสำหรับ preview)
-          const certificateNumber = `PCW-PREVIEW-${Date.now()}`;
-          
-          // แปลงวันที่ส่งมอบเป็นรูปแบบไทย
-          const formattedDeliveryDate = new Date(formData.deliveryDate).toLocaleDateString('th-TH', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          });
-
-          // สร้างข้อมูลใบรับประกัน preview
-          const previewCertificateDetails: CertificateDetails = {
-            companyName: relatedData.company.name,
-            companyAddress: relatedData.company.address,
-            companyPhone: relatedData.company.phone,
-            companyWebsite: relatedData.company.website,
-            projectNameAndLocation: `${relatedData.project.name} - ${relatedData.project.location}`,
-            customerName: relatedData.customer.name,
-            buyer: relatedData.customer.buyer, // เพิ่มผู้ซื้อสินค้า
-            deliveryDate: formattedDeliveryDate,
-            productItems: relatedData.product.name,
-            batchNumber: formData.batchNumbers,
-            certificateNumber,
-            issueDate,
-            additionalNotes: formData.additionalNotes, // เพิ่มหมายเหตุเพิ่มเติม
-          };
-          
-          console.log('🔄 อัปเดต preview - additionalNotes:', formData.additionalNotes);
-          
-          setCertificateDetails(previewCertificateDetails);
-        } catch (error) {
-          console.error('Error generating preview:', error);
-        }
-      } else if (!isFormValid || !relatedData.company || !relatedData.customer || !relatedData.project || !relatedData.product) {
-        // ล้าง preview หากข้อมูลไม่ครบ (ยกเว้นเมื่อดูเอกสารเก่า)
-        if (!viewingCertificate) {
-          setCertificateDetails(null);
-        }
+        // สร้างข้อมูลใบรับประกัน preview
+        const previewCertificateDetails: CertificateDetails = {
+          companyName: relatedData.company.name,
+          companyAddress: relatedData.company.address,
+          companyPhone: relatedData.company.phone,
+          companyWebsite: relatedData.company.website,
+          projectNameAndLocation: `${relatedData.project.name} - ${relatedData.project.location}`,
+          customerName: relatedData.customer.name,
+          buyer: relatedData.customer.buyer, // เพิ่มผู้ซื้อสินค้า
+          deliveryDate: formattedDeliveryDate,
+          productItems: relatedData.product.name,
+          batchNumber: formData.batchNumbers,
+          certificateNumber,
+          issueDate,
+          additionalNotes: formData.additionalNotes, // เพิ่มหมายเหตุเพิ่มเติม
+        };
+        
+        console.log('🔄 สร้าง preview ด้วยตนเอง - additionalNotes:', formData.additionalNotes);
+        
+        setCertificateDetails(previewCertificateDetails);
+        alert('✅ สร้าง Preview สำเร็จ!');
+      } catch (error) {
+        console.error('Error generating preview:', error);
+        alert('❌ เกิดข้อผิดพลาดในการสร้าง Preview');
       }
-    };
-
-    generatePreview();
-  }, [isFormValid, relatedData, formData.batchNumbers, formData.deliveryDate, formData.additionalNotes, viewingCertificate]);
+    } else {
+      alert('❌ กรุณากรอกข้อมูลให้ครบถ้วนก่อนสร้าง Preview');
+    }
+  };
 
   // ฟังก์ชันนี้ไม่ใช้แล้วเพราะโลโก้โหลดอัตโนมัติจากบริษัท
   // const handleLogoChange = ... (ถูกลบออกแล้ว)
 
-  // ฟังก์ชันลบโลโก้
-  const handleRemoveLogo = async () => {
-    try {
-      // ลบจาก Firebase Storage หากมี
-      if (logoInfo?.fullPath) {
-        console.log('🔄 กำลังลบโลโก้จาก Firebase Storage...');
-        await LogoStorageService.deleteLogo(logoInfo.fullPath);
-        console.log('✅ ลบโลโก้จาก Storage สำเร็จ!');
-      }
-      
-      // ล้าง state
-      setLogoSrc(null);
-      setLogoFileName(null);
-      setLogoInfo(null);
-      
-      // รีเซ็ต input file
-      const fileInput = document.getElementById('logoUpload') as HTMLInputElement;
-      if (fileInput) {
-        fileInput.value = '';
-      }
-    } catch (error) {
-      console.error('❌ เกิดข้อผิดพลาดในการลบโลโก้:', error);
-      alert((error as Error).message);
-    }
-  };
-
   // ฟังก์ชันสำหรับเปลี่ยนขนาดโลโก้
   const handleLogoSizeChange = (size: 'small' | 'medium' | 'large') => {
     setLogoSize(size);
-    LogoStorageService.updateLogoSize(size); // อัปเดตใน localStorage
-  };
-
-  // ฟังก์ชันสำหรับเลือกโลโก้จาก Gallery
-  const handleSelectLogoFromGallery = (logoInfo: LogoInfo) => {
-    console.log('🎯 เลือกโลโก้จาก gallery:', logoInfo.fileName);
-    
-    // อัปเดต state ด้วยข้อมูลจาก gallery
-    setLogoInfo(logoInfo);
-    setLogoSrc(logoInfo.url);
-    setLogoFileName(logoInfo.fileName);
-    setLogoSize(logoInfo.size);
-    
-    // อัปเดต localStorage
-    LogoStorageService.saveLogoToLocalStorage(logoInfo);
-    
-    console.log('✅ เลือกโลโก้จาก gallery สำเร็จ!');
+    // บันทึกขนาดโลโก้ลง localStorage (ใช้สำหรับบันทึกการตั้งค่าผู้ใช้)
+    try {
+      localStorage.setItem('preferredLogoSize', size);
+    } catch (error) {
+      console.warn('ไม่สามารถบันทึกขนาดโลโก้ลง localStorage:', error);
+    }
   };
 
   // บันทึกใบรับประกันลง Firestore (เปลี่ยนจาก preview เป็นเอกสารจริง)
@@ -678,12 +617,10 @@ const App: React.FC = () => {
               onGenerate={handleGenerate}
               isFormValid={isFormValid}
               logoSrc={logoSrc}
-              logoFileName={logoFileName}
               logoSize={logoSize}
               onLogoSizeChange={handleLogoSizeChange}
-              onRemoveLogo={handleRemoveLogo}
-              onSelectLogoFromGallery={handleSelectLogoFromGallery}
               isViewingMode={!!viewingCertificate}
+              onGeneratePreview={generatePreviewManually}
             />
             
             <CertificatePreview

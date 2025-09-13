@@ -3,7 +3,6 @@ import { Box, Flex, Heading, Text, Button } from '@radix-ui/themes';
 import { WorkDeliveryForm } from './WorkDeliveryForm';
 import { WorkDeliveryPreview } from './WorkDeliveryPreview';
 import { FirestoreService } from '../services/firestoreService';
-import { LogoStorageService } from '../services/logoStorageService';
 import { Company, Customer, Project } from '../types/firestore';
 import { 
   WorkType, 
@@ -17,11 +16,7 @@ import {
 import { exportWorkDeliveryToPDF } from '../utils/pdfGenerator';
 import { printWorkDelivery } from '../utils/printUtils';
 
-interface LogoInfo {
-  url: string;
-  fileName: string;
-  size: 'small' | 'medium' | 'large';
-}
+// ลบ LogoInfo interface - ใช้โลโก้จากบริษัทโดยตรง
 
 interface FormData {
   companyId: string;
@@ -59,11 +54,9 @@ export const WorkDeliveryPrecast: React.FC<WorkDeliveryPrecastProps> = ({
   const [phases, setPhases] = useState<PrecastPhase[]>([]);
   const [deliveryDetails, setDeliveryDetails] = useState<WorkDeliveryDetails | null>(null);
   
-  // State สำหรับโลโก้
+  // State สำหรับโลโก้ (โหลดจากบริษัทอัตโนมัติ)
   const [logoSrc, setLogoSrc] = useState<string | null>(null);
   const [logoSize, setLogoSize] = useState<'small' | 'medium' | 'large'>('medium');
-  const [logoFileName, setLogoFileName] = useState<string | null>(null);
-  const [logoInfo, setLogoInfo] = useState<LogoInfo | null>(null);
   
   // State สำหรับข้อมูลที่ดึงมาจาก Firestore
   const [relatedData, setRelatedData] = useState<{
@@ -295,68 +288,70 @@ export const WorkDeliveryPrecast: React.FC<WorkDeliveryPrecastProps> = ({
     }
   }, [formData.companyId, formData.customerId, formData.projectId]);
 
-  // สร้าง preview อัตโนมัติเมื่อข้อมูลครบถ้วน
-  useEffect(() => {
-    const generatePreview = async () => {
-      // ตรวจสอบเงื่อนไขการแสดง preview แบบผ่อนคลาย
-      const hasBasicData = formData.companyId && formData.customerId && formData.projectId && formData.deliveryDate;
+  // ฟังก์ชันสร้าง preview แบบด้วยตนเอง (ไม่อัตโนมัติ)
+  const generatePreviewManually = async () => {
+    // ตรวจสอบเงื่อนไขการแสดง preview แบบผ่อนคลาย
+    const hasBasicData = formData.companyId && formData.customerId && formData.projectId && formData.deliveryDate;
+    
+    // เงื่อนไขที่ผ่อนคลายสำหรับ viewing mode จาก history
+    const canGeneratePreview = viewingWorkDelivery ? 
+      (formData.deliveryDate && phases.length > 0) : // สำหรับ viewing mode เช็คแค่ deliveryDate และ phases
+      (hasBasicData && relatedData.company && relatedData.customer && relatedData.project && phases.length > 0);
+
+    if (canGeneratePreview) {
       
-      // เงื่อนไขที่ผ่อนคลายสำหรับ viewing mode จาก history
-      const canGeneratePreview = viewingWorkDelivery ? 
-        (formData.deliveryDate && phases.length > 0) : // สำหรับ viewing mode เช็คแค่ deliveryDate และ phases
-        (hasBasicData && relatedData.company && relatedData.customer && relatedData.project && phases.length > 0);
-
-      if (canGeneratePreview) {
+      try {
+        console.log('✅ Manual preview (Precast) - All conditions met');
         
-        try {
-          // สร้างวันที่ปัจจุบันในรูปแบบไทย
-          const issueDate = new Date().toLocaleDateString('th-TH', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          });
+        // สร้างวันที่ปัจจุบันในรูปแบบไทย
+        const issueDate = new Date().toLocaleDateString('th-TH', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
 
-          // สร้างหมายเลขใบส่งมอบ (ชั่วคราวสำหรับ preview)
-          const deliveryNumber = `WD-PRECAST-PREVIEW-${Date.now()}`;
-          
-          // แปลงวันที่ส่งมอบเป็นรูปแบบไทย
-          const formattedDeliveryDate = new Date(formData.deliveryDate).toLocaleDateString('th-TH', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          });
+        // สร้างหมายเลขใบส่งมอบ (ชั่วคราวสำหรับ preview)
+        const deliveryNumber = `WD-PRECAST-PREVIEW-${Date.now()}`;
+        
+        // แปลงวันที่ส่งมอบเป็นรูปแบบไทย
+        const formattedDeliveryDate = new Date(formData.deliveryDate).toLocaleDateString('th-TH', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
 
-          // สร้างข้อมูลใบส่งมอบ preview
-          // ใช้ข้อมูลจาก workDeliveryDetails หากมี (กรณี viewing mode) หรือใช้ relatedData
-          const previewDeliveryDetails: WorkDeliveryDetails = {
-            companyName: workDeliveryDetails?.companyName || relatedData.company?.name || '',
-            companyAddress: workDeliveryDetails?.companyAddress || relatedData.company?.address || '',
-            companyPhone: workDeliveryDetails?.companyPhone || relatedData.company?.phone || '',
-            companyWebsite: workDeliveryDetails?.companyWebsite || relatedData.company?.website || '',
-            projectNameAndLocation: workDeliveryDetails?.projectNameAndLocation || 
-              (relatedData.project ? `${relatedData.project.name} - ${relatedData.project.location}` : ''),
-            customerName: workDeliveryDetails?.customerName || relatedData.customer?.name || '',
-            buyer: workDeliveryDetails?.buyer || relatedData.customer?.buyer || '',
-            workType: formData.workType,
-            phases: phases,
-            currentPhase: formData.currentPhase,
-            deliveryNumber: workDeliveryDetails?.deliveryNumber || deliveryNumber,
-            issueDate: workDeliveryDetails?.issueDate || issueDate,
-            deliveryDate: workDeliveryDetails?.deliveryDate || formattedDeliveryDate,
-            additionalNotes: formData.additionalNotes,
-          };
-          
-          setDeliveryDetails(previewDeliveryDetails);
-        } catch (error) {
-          console.error('Error generating preview:', error);
-        }
-      } else {
-        setDeliveryDetails(null);
+        // สร้างข้อมูลใบส่งมอบ preview
+        // ใช้ข้อมูลจาก workDeliveryDetails หากมี (กรณี viewing mode) หรือใช้ relatedData
+        const previewDeliveryDetails: WorkDeliveryDetails = {
+          companyName: workDeliveryDetails?.companyName || relatedData.company?.name || '',
+          companyAddress: workDeliveryDetails?.companyAddress || relatedData.company?.address || '',
+          companyPhone: workDeliveryDetails?.companyPhone || relatedData.company?.phone || '',
+          companyWebsite: workDeliveryDetails?.companyWebsite || relatedData.company?.website || '',
+          projectNameAndLocation: workDeliveryDetails?.projectNameAndLocation || 
+            (relatedData.project ? `${relatedData.project.name} - ${relatedData.project.location}` : ''),
+          customerName: workDeliveryDetails?.customerName || relatedData.customer?.name || '',
+          buyer: workDeliveryDetails?.buyer || relatedData.customer?.buyer || '',
+          workType: formData.workType,
+          phases: phases,
+          currentPhase: formData.currentPhase,
+          deliveryNumber: workDeliveryDetails?.deliveryNumber || deliveryNumber,
+          issueDate: workDeliveryDetails?.issueDate || issueDate,
+          deliveryDate: workDeliveryDetails?.deliveryDate || formattedDeliveryDate,
+          additionalNotes: formData.additionalNotes,
+        };
+        
+        setDeliveryDetails(previewDeliveryDetails);
+        console.log('🎉 Manual Preview (Precast) generated successfully');
+        alert('✅ สร้าง Preview สำเร็จ!');
+      } catch (error) {
+        console.error('Error generating manual preview (Precast):', error);
+        alert('❌ เกิดข้อผิดพลาดในการสร้าง Preview');
       }
-    };
-
-    generatePreview();
-  }, [formData, relatedData, phases]);
+    } else {
+      console.log('❌ Manual Preview (Precast) conditions not met');
+      alert('❌ กรุณากรอกข้อมูลให้ครบถ้วนและเลือกงวดงานก่อนสร้าง Preview');
+    }
+  };
 
   // เริ่มต้นด้วยงวดงานเริ่มต้น
   useEffect(() => {
@@ -708,6 +703,7 @@ export const WorkDeliveryPrecast: React.FC<WorkDeliveryPrecastProps> = ({
           onLogoSizeChange={handleLogoSizeChange}
           onRemoveLogo={handleRemoveLogo}
           onSelectLogoFromGallery={handleSelectLogoFromGallery}
+          onGeneratePreview={generatePreviewManually}
         />
         
         <WorkDeliveryPreview
