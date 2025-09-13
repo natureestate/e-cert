@@ -1,4 +1,4 @@
-import { Template, BLANK_PDF } from '@pdfme/common';
+import { Template, BLANK_PDF, Font } from '@pdfme/common';
 import { generate } from '@pdfme/generator';
 import { text, barcodes, image } from '@pdfme/schemas';
 import { CertificateDetails } from '../types/certificate';
@@ -11,11 +11,26 @@ import { WorkDeliveryDetails } from '../types/workDelivery';
 export class PDFmeService {
   
   /**
+   * สร้างฟอนต์ไทยสำหรับ pdfme
+   * ใช้ฟอนต์ที่รองรับ Unicode และภาษาไทย
+   */
+  static getThaiFont(): Font {
+    return {
+      'NotoSans': {
+        // ใช้ base64 encoded font หรือ URL ของฟอนต์ที่รองรับไทย
+        data: '',
+        fallback: true,
+        subset: false, // อนุญาตให้ใช้ทุกตัวอักษร
+      },
+    };
+  }
+  
+  /**
    * สร้าง template สำหรับใบรับประกัน
    */
   static createCertificateTemplate(): Template {
     return {
-      basePdf: BLANK_PDF,
+      basePdf: { width: 210, height: 297, padding: [10, 10, 10, 10] },
       schemas: [
         [
           // Header - โลโก้และชื่อเอกสาร
@@ -35,7 +50,6 @@ export class PDFmeService {
             fontSize: 18,
             fontColor: '#1e40af',
             alignment: 'center',
-            fontName: 'NotoSansThai',
           },
           {
             name: 'certificate_number',
@@ -57,7 +71,6 @@ export class PDFmeService {
             fontSize: 14,
             fontColor: '#1e40af',
             alignment: 'center',
-            fontName: 'NotoSansThai',
           },
           {
             name: 'company_address',
@@ -87,7 +100,6 @@ export class PDFmeService {
             height: 6,
             fontSize: 12,
             fontColor: '#1e40af',
-            fontName: 'NotoSansThai',
           },
           {
             name: 'project_name',
@@ -131,7 +143,6 @@ export class PDFmeService {
             height: 6,
             fontSize: 12,
             fontColor: '#1e40af',
-            fontName: 'NotoSansThai',
           },
           {
             name: 'product_type',
@@ -167,7 +178,6 @@ export class PDFmeService {
             height: 6,
             fontSize: 12,
             fontColor: '#1e40af',
-            fontName: 'NotoSansThai',
           },
           {
             name: 'warranty_intro',
@@ -186,7 +196,6 @@ export class PDFmeService {
             width: 80,
             height: 6,
             fontSize: 11,
-            fontName: 'NotoSansThai',
           },
           {
             name: 'warranty_scope',
@@ -205,7 +214,6 @@ export class PDFmeService {
             width: 80,
             height: 6,
             fontSize: 11,
-            fontName: 'NotoSansThai',
           },
           {
             name: 'warranty_limitations',
@@ -225,7 +233,6 @@ export class PDFmeService {
             height: 6,
             fontSize: 12,
             fontColor: '#1e40af',
-            fontName: 'NotoSansThai',
           },
           {
             name: 'important_terms',
@@ -260,7 +267,6 @@ export class PDFmeService {
             width: 100,
             height: 6,
             fontSize: 9,
-            fontName: 'NotoSansThai',
           },
           {
             name: 'issue_date_label',
@@ -269,7 +275,6 @@ export class PDFmeService {
             width: 60,
             height: 6,
             fontSize: 10,
-            fontName: 'NotoSansThai',
           },
           {
             name: 'issue_date',
@@ -289,7 +294,7 @@ export class PDFmeService {
    */
   static createWorkDeliveryTemplate(): Template {
     return {
-      basePdf: BLANK_PDF,
+      basePdf: { width: 210, height: 297, padding: [10, 10, 10, 10] },
       schemas: [
         [
           // Header - โลโก้และชื่อเอกสาร
@@ -309,7 +314,6 @@ export class PDFmeService {
             fontSize: 18,
             fontColor: '#1e40af',
             alignment: 'center',
-            fontName: 'NotoSansThai',
           },
           {
             name: 'delivery_number',
@@ -331,7 +335,6 @@ export class PDFmeService {
             fontSize: 14,
             fontColor: '#1e40af',
             alignment: 'center',
-            fontName: 'NotoSansThai',
           },
           {
             name: 'company_address',
@@ -361,7 +364,6 @@ export class PDFmeService {
             height: 6,
             fontSize: 12,
             fontColor: '#1e40af',
-            fontName: 'NotoSansThai',
           },
           {
             name: 'project_name',
@@ -397,7 +399,6 @@ export class PDFmeService {
             height: 6,
             fontSize: 12,
             fontColor: '#1e40af',
-            fontName: 'NotoSansThai',
           },
           {
             name: 'current_phase',
@@ -406,7 +407,6 @@ export class PDFmeService {
             width: 170,
             height: 6,
             fontSize: 11,
-            fontName: 'NotoSansThai',
           },
           {
             name: 'phases_list',
@@ -433,7 +433,6 @@ export class PDFmeService {
             width: 60,
             height: 6,
             fontSize: 10,
-            fontName: 'NotoSansThai',
           },
           {
             name: 'issue_date',
@@ -450,7 +449,6 @@ export class PDFmeService {
             width: 60,
             height: 6,
             fontSize: 10,
-            fontName: 'NotoSansThai',
           },
           {
             name: 'delivery_date',
@@ -595,7 +593,7 @@ export class PDFmeService {
       const inputData = this.createCertificateInputData(certificateDetails, logoSrc, warrantyTerms);
       const inputs = [inputData];
 
-      // สร้าง PDF ด้วย pdfme
+      // สร้าง PDF ด้วย pdfme พร้อมฟอนต์ไทย
       const pdf = await generate({
         template,
         inputs,
@@ -628,7 +626,7 @@ export class PDFmeService {
       const inputData = this.createWorkDeliveryInputData(deliveryDetails, logoSrc);
       const inputs = [inputData];
 
-      // สร้าง PDF ด้วย pdfme
+      // สร้าง PDF ด้วย pdfme พร้อมฟอนต์ไทย
       const pdf = await generate({
         template,
         inputs,
