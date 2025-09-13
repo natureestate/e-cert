@@ -487,6 +487,9 @@ export class FirestoreService {
         isActive: true
       });
 
+      // สร้างข้อมูลตัวอย่างใบส่งมอบงาน
+      await this.initializeDefaultWorkDeliveries();
+
       console.log('Default data created successfully!');
     } catch (error) {
       console.error('Error creating default data:', error);
@@ -551,6 +554,88 @@ export class FirestoreService {
       isActive: false,
       updatedAt: new Date()
     });
+  }
+
+  // สร้างข้อมูลตัวอย่างใบส่งมอบงาน
+  static async initializeDefaultWorkDeliveries(): Promise<void> {
+    try {
+      const existingDeliveries = await this.getWorkDeliveries();
+      if (existingDeliveries.length > 0) {
+        console.log('Work deliveries already exist');
+        return;
+      }
+
+      console.log('Creating default work deliveries...');
+
+      // ใบส่งมอบงานรับสร้างบ้าน
+      const houseDelivery = {
+        deliveryNumber: 'WD-HOUSE-001',
+        workType: 'house-construction',
+        buildingType: 'two-story',
+        companyId: 'comp1', 
+        companyName: 'บริษัท พรีคาสท์คอนกรีต จำกัด',
+        companyAddress: '99/9 อาคารคอนกรีต ถนนพัฒนา แขวงลุมพินี เขตปทุมวัน กรุงเทพมหานคร 10330',
+        companyPhone: '02-123-4567',
+        companyWebsite: 'www.precast.co.th',
+        customerId: 'cust1',
+        customerName: 'คุณสมชาย รักบ้าน',
+        buyer: 'นายสมชาย ใจดี',
+        projectId: 'proj1',
+        projectName: 'โครงการหมู่บ้านเจริญสุข',
+        projectLocation: '123 หมู่ 4 ต.บางรัก อ.เมือง จ.นนทบุรี 11000',
+        phases: [
+          { phaseNumber: 1, name: 'เซ็นสัญญา', description: 'เซ็นสัญญาและทำข้อตกลง', isCompleted: true, completedDate: new Date('2024-01-15') },
+          { phaseNumber: 2, name: 'ฐานราก,ตอม่อ', description: 'งานทำฐานรากและงานตอม่อ', isCompleted: true, completedDate: new Date('2024-02-01') },
+          { phaseNumber: 3, name: 'คานคอดิน', description: 'งานสร้างคานคอดิน', isCompleted: false },
+        ],
+        currentPhase: 3,
+        issueDate: new Date('2024-02-15'),
+        deliveryDate: new Date('2024-02-20'),
+        additionalNotes: 'โครงการบ้านเดี่ยว 2 ชั้น',
+        status: 'delivered',
+        progress: 67,
+        isActive: true
+      };
+
+      // ใบส่งมอบงาน Precast Concrete
+      const precastDelivery = {
+        deliveryNumber: 'WD-PRECAST-001',
+        workType: 'precast-concrete',
+        companyId: 'comp1',
+        companyName: 'บริษัท พรีคาสท์คอนกรีต จำกัด',
+        companyAddress: '99/9 อาคารคอนกรีต ถนนพัฒนา แขวงลุมพินี เขตปทุมวัน กรุงเทพมหานคร 10330',
+        companyPhone: '02-123-4567',
+        companyWebsite: 'www.precast.co.th',
+        customerId: 'cust2',
+        customerName: 'คุณสมหญิง สร้างบ้าน',
+        buyer: 'นางสมหญิง ใจดี',
+        projectId: 'proj2',
+        projectName: 'โครงการคอนโดมิเนียมสมัยใหม่',
+        projectLocation: '456 ถนนรัชดา แขวงลาดยาว เขตจตุจักร กรุงเทพฯ 10900',
+        phases: [
+          { phaseNumber: 1, name: 'การเตรียมพื้นที่', description: 'การเตรียมพื้นที่และสำรวจหน้างาน', isCompleted: true, completedDate: new Date('2024-01-20') },
+          { phaseNumber: 2, name: 'งานฐานราก', description: 'งานเทฐานรากและเสาเข็ม', isCompleted: true, completedDate: new Date('2024-02-05') },
+          { phaseNumber: 3, name: 'ติดตั้ง Precast', description: 'การติดตั้งชิ้นส่วน Precast', isCompleted: true, completedDate: new Date('2024-02-10') },
+          { phaseNumber: 4, name: 'งานต่อเชื่อม', description: 'งานต่อเชื่อมและเสริมกำลัง', isCompleted: false },
+          { phaseNumber: 5, name: 'งานตกแต่ง', description: 'งานตกแต่งและสีทา', isCompleted: false },
+        ],
+        currentPhase: 4,
+        issueDate: new Date('2024-02-10'),
+        deliveryDate: new Date('2024-02-15'),
+        additionalNotes: 'โครงการ Precast บ้าน 2 ชั้น',
+        status: 'acknowledged',
+        progress: 60,
+        isActive: true
+      };
+
+      // บันทึกข้อมูลลง Firebase
+      await this.createWorkDelivery(houseDelivery);
+      await this.createWorkDelivery(precastDelivery);
+
+      console.log('✅ สร้างข้อมูลตัวอย่างใบส่งมอบงานเรียบร้อย');
+    } catch (error) {
+      console.error('❌ เกิดข้อผิดพลาดในการสร้างข้อมูลตัวอย่าง:', error);
+    }
   }
 
   // Phase Templates

@@ -26,9 +26,29 @@ export const WorkDeliveryHistory: React.FC<WorkDeliveryHistoryProps> = ({
         const deliveriesData = await FirestoreService.getWorkDeliveries();
         console.log('📊 โหลดข้อมูลใบส่งมอบงวดงานจาก Firestore:', deliveriesData);
         
-        // ถ้าไม่มีข้อมูลจริง ให้ใช้ข้อมูลจำลองแทน
-        if (deliveriesData.length === 0) {
-          console.log('📋 ไม่มีข้อมูลใน Firestore ใช้ข้อมูลจำลองแทน');
+        // ถ้ามีข้อมูลจริง ให้ใช้ข้อมูลจริง
+        if (deliveriesData.length > 0) {
+          console.log('✅ พบข้อมูลจริงใน Firestore จำนวน:', deliveriesData.length);
+          setDeliveries(deliveriesData);
+          setFilteredDeliveries(deliveriesData);
+          return;
+        }
+        
+        // ถ้าไม่มีข้อมูลจริง ให้สร้างข้อมูลตัวอย่างในฐานข้อมูล
+        console.log('📋 ไม่มีข้อมูลใน Firestore กำลังสร้างข้อมูลตัวอย่าง...');
+        await FirestoreService.initializeDefaultWorkDeliveries();
+        
+        // โหลดข้อมูลใหม่หลังจากสร้างข้อมูลตัวอย่าง
+        const newDeliveriesData = await FirestoreService.getWorkDeliveries();
+        if (newDeliveriesData.length > 0) {
+          console.log('✅ สร้างและโหลดข้อมูลตัวอย่างเรียบร้อย จำนวน:', newDeliveriesData.length);
+          setDeliveries(newDeliveriesData);
+          setFilteredDeliveries(newDeliveriesData);
+          return;
+        }
+        
+        // ถ้ายังไม่ได้ ให้ใช้ข้อมูลจำลองเป็นทางเลือกสุดท้าย
+        console.log('⚠️ ไม่สามารถสร้างข้อมูลใน Firestore ได้ ใช้ข้อมูลจำลองชั่วคราว');
           const mockDeliveries: WorkDelivery[] = [
           {
             id: '1',
@@ -93,10 +113,7 @@ export const WorkDeliveryHistory: React.FC<WorkDeliveryHistoryProps> = ({
           ];
           
           setDeliveries(mockDeliveries);
-        } else {
-          // ใช้ข้อมูลจริงจาก Firestore
-          setDeliveries(deliveriesData);
-        }
+          setFilteredDeliveries(mockDeliveries);
       } catch (error) {
         console.error('Error loading work deliveries:', error);
       } finally {
