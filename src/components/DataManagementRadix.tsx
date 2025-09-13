@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FirestoreService } from '../services/firestoreService';
+import { LogoStorageService, LogoInfo } from '../services/logoStorageService';
 import { Company, Customer, Project, Product, BatchNumber } from '../types/firestore';
 import {
   Button,
@@ -14,6 +15,7 @@ import {
   Section
 } from '@radix-ui/themes';
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
+import { ImageIcon, UploadIcon, TrashIcon } from '@radix-ui/react-icons';
 
 interface DataManagementRadixProps {
   dataType: 'companies' | 'customers' | 'projects' | 'products' | 'batches';
@@ -28,6 +30,17 @@ export const DataManagementRadix: React.FC<DataManagementRadixProps> = ({ dataTy
   const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
   const [isDeleteItemDialogOpen, setIsDeleteItemDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<any | null>(null);
+  
+  // States สำหรับจัดการโลโก้ (ใช้เฉพาะกับ companies)
+  const [logoSrc, setLogoSrc] = useState<string | null>(null);
+  const [logoFileName, setLogoFileName] = useState<string | null>(null);
+  const [logoInfo, setLogoInfo] = useState<LogoInfo | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  
+  // States สำหรับ Logo Gallery
+  const [showLogoGallery, setShowLogoGallery] = useState(false);
+  const [availableLogos, setAvailableLogos] = useState<LogoInfo[]>([]);
+  const [loadingLogos, setLoadingLogos] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -67,7 +80,7 @@ export const DataManagementRadix: React.FC<DataManagementRadixProps> = ({ dataTy
   const getEmptyFormData = () => {
     switch (dataType) {
       case 'companies':
-        return { name: '', address: '', phone: '', website: '', isActive: true };
+        return { name: '', address: '', phone: '', website: '', logoUrl: '', isActive: true };
       case 'customers':
         return { name: '', phone: '', email: '', address: '', buyer: '', isActive: true };
       case 'projects':
@@ -81,15 +94,135 @@ export const DataManagementRadix: React.FC<DataManagementRadixProps> = ({ dataTy
     }
   };
 
+  // ฟังก์ชันสำหรับจัดการโลโก้
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && dataType === 'companies') {
+      try {
+        setIsUploadingLogo(true);
+        
+        // ตรวจสอบไฟล์
+        if (!LogoStorageService.isValidImageFile(file)) {
+          alert('กรุณาเลือกไฟล์รูปภาพ (PNG, JPG, SVG, WebP)');
+          return;
+        }
+        
+        if (!LogoStorageService.isValidFileSize(file)) {
+          alert('ขนาดไฟล์ต้องไม่เกิน 5MB');
+          return;
+        }
+
+        console.log('📷 กำลังอัปโหลดโลโก้...', file.name);
+        
+        // อัปโหลดไฟล์ไปยัง Firebase Storage
+        const uploadedLogoInfo = await LogoStorageService.uploadLogo(file);
+        
+        // อัปเดต state
+        setLogoSrc(uploadedLogoInfo.url);
+        setLogoFileName(uploadedLogoInfo.fileName);
+        setLogoInfo(uploadedLogoInfo);
+        
+        // อัปเดต formData ด้วย URL ของโลโก้
+        setFormData(prev => ({ ...prev, logoUrl: uploadedLogoInfo.url }));
+        
+        console.log('✅ อัปโหลดโลโก้สำเร็จ:', uploadedLogoInfo);
+      } catch (error) {
+        console.error('Error uploading logo:', error);
+        alert('เกิดข้อผิดพลาดในการอัปโหลดโลโก้');
+      } finally {
+        setIsUploadingLogo(false);
+      }
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    if (logoInfo?.url) {
+      try {
+        await LogoStorageService.deleteLogo(logoInfo.url);
+        console.log('🗑️ ลบโลโก้สำเร็จ');
+      } catch (error) {
+        console.error('Error deleting logo:', error);
+      }
+    }
+    
+    setLogoSrc(null);
+    setLogoFileName(null);
+    setLogoInfo(null);
+    setFormData(prev => ({ ...prev, logoUrl: '' }));
+  };
+
+  // ฟังก์ชันโหลดโลโก้ที่มีอยู่แล้วใน Gallery
+  const loadAvailableLogos = async () => {
+    setLoadingLogos(true);
+    try {
+      const logos = await LogoStorageService.getCompanyLogos();
+      setAvailableLogos(logos);
+    } catch (error) {
+      console.error('Error loading available logos:', error);
+    } finally {
+      setLoadingLogos(false);
+    }
+  };
+
+  // ฟังก์ชันเลือกโลโก้จาก Gallery
+  const handleSelectLogoFromGallery = (logo: LogoInfo) => {
+    setLogoSrc(logo.url);
+    setLogoFileName(logo.fileName);
+    setLogoInfo(logo);
+    setFormData(prev => ({ ...prev, logoUrl: logo.url }));
+    setShowLogoGallery(false);
+  };
+
+  // ฟังก์ชันลบโลโก้จาก Gallery
+  const handleDeleteLogoFromGallery = async (logo: LogoInfo) => {
+    try {
+      await LogoStorageService.deleteLogo(logo.fullPath);
+      // โหลดรายการโลโก้ใหม่
+      await loadAvailableLogos();
+      // ถ้าโลโก้ที่ลบคือโลโก้ที่เลือกอยู่ ให้ลบออกจากฟอร์ม
+      if (logoSrc === logo.url) {
+        handleRemoveLogo();
+      }
+    } catch (error) {
+      console.error('Error deleting logo:', error);
+      alert('เกิดข้อผิดพลาดในการลบโลโก้');
+    }
+  };
+
   const handleAdd = () => {
     setFormData(getEmptyFormData());
     setEditingItem(null);
+    // รีเซ็ต logo state
+    setLogoSrc(null);
+    setLogoFileName(null);
+    setLogoInfo(null);
     setIsDialogOpen(true);
   };
 
   const handleEdit = (item: any) => {
     setFormData({ ...item });
     setEditingItem(item);
+    
+    // ตั้งค่า logo state สำหรับการแก้ไข
+    if (dataType === 'companies' && item.logoUrl) {
+      console.log('🏢 โหลดโลโก้บริษัทสำหรับการแก้ไข:', item.logoUrl);
+      setLogoSrc(item.logoUrl);
+      // ดึงชื่อไฟล์จาก URL หรือใช้ชื่อบริษัท
+      const fileName = item.logoUrl.split('/').pop()?.split('?')[0] || `${item.name || 'company'}-logo`;
+      setLogoFileName(fileName);
+      setLogoInfo({
+        url: item.logoUrl,
+        fileName: fileName,
+        fullPath: '', // ไม่มี fullPath สำหรับโลโก้เก่า
+        size: 'medium',
+        uploadedAt: new Date()
+      });
+    } else {
+      setLogoSrc(null);
+      setLogoFileName(null);
+      setLogoInfo(null);
+    }
+    
     setIsDialogOpen(true);
   };
 
@@ -115,13 +248,33 @@ export const DataManagementRadix: React.FC<DataManagementRadixProps> = ({ dataTy
             break;
         }
       } else {
-        // Update functionality would go here
-        console.log('Update functionality not implemented yet');
+        // Updating existing item
+        switch (dataType) {
+          case 'companies':
+            await FirestoreService.updateCompany(editingItem.id, formData);
+            break;
+          case 'customers':
+            await FirestoreService.updateCustomer(editingItem.id, formData);
+            break;
+          case 'projects':
+            await FirestoreService.updateProject(editingItem.id, formData);
+            break;
+          case 'products':
+            await FirestoreService.updateProduct(editingItem.id, formData);
+            break;
+          case 'batches':
+            await FirestoreService.updateBatchNumber(editingItem.id, formData);
+            break;
+        }
       }
       
       setIsDialogOpen(false);
       setFormData({});
       setEditingItem(null);
+      // รีเซ็ต logo state
+      setLogoSrc(null);
+      setLogoFileName(null);
+      setLogoInfo(null);
       loadData(); // Refresh data
     } catch (error) {
       console.error('Error saving data:', error);
@@ -302,6 +455,133 @@ export const DataManagementRadix: React.FC<DataManagementRadixProps> = ({ dataTy
             )}
           </div>
         ))}
+        
+        {/* Logo Upload Section สำหรับบริษัท */}
+        {dataType === 'companies' && (
+          <div>
+            <label 
+              style={{
+                display: 'block',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                marginBottom: '0.5rem',
+                color: 'var(--gray-11)'
+              }}
+            >
+              โลโก้บริษัท
+            </label>
+            
+            {!logoSrc ? (
+              <div>
+                <div
+                  style={{
+                    border: '2px dashed var(--blue-6)',
+                    borderRadius: '8px',
+                    padding: '1.5rem',
+                    backgroundColor: 'var(--blue-2)',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    marginBottom: '0.75rem'
+                  }}
+                  onClick={() => document.getElementById('logoUpload')?.click()}
+                >
+                  <input
+                    type="file"
+                    id="logoUpload"
+                    accept="image/*"
+                    onChange={handleLogoChange}
+                    style={{ display: 'none' }}
+                    disabled={isUploadingLogo}
+                  />
+                  <UploadIcon 
+                    width={32} 
+                    height={32}
+                    style={{ margin: '0 auto 8px', color: 'var(--blue-9)' }} 
+                  />
+                  <div style={{ color: 'var(--blue-11)', fontWeight: '500' }}>
+                    {isUploadingLogo ? 'กำลังอัปโหลด...' : 'คลิกเพื่อเลือกโลโก้'}
+                  </div>
+                  <div style={{ color: 'var(--gray-10)', fontSize: '0.875rem', marginTop: '4px' }}>
+                    รองรับไฟล์ PNG, JPG, SVG, WebP (สูงสุด 5MB)
+                  </div>
+                </div>
+                
+                <div style={{ textAlign: 'center' }}>
+                  <Text size="2" color="gray" style={{ marginBottom: '0.5rem', display: 'block' }}>
+                    หรือ
+                  </Text>
+                  <Button
+                    variant="outline"
+                    size="2"
+                    onClick={() => {
+                      setShowLogoGallery(true);
+                      loadAvailableLogos();
+                    }}
+                    disabled={isUploadingLogo}
+                    style={{
+                      borderColor: 'var(--blue-6)',
+                      color: 'var(--blue-11)',
+                      backgroundColor: 'transparent'
+                    }}
+                  >
+                    <ImageIcon width={16} height={16} />
+                    เลือกจาก Gallery
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div
+                style={{
+                  border: '1px solid var(--green-6)',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  backgroundColor: 'var(--green-2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem'
+                }}
+              >
+                <img
+                  src={logoSrc}
+                  alt="Logo preview"
+                  style={{
+                    width: '60px',
+                    height: '60px',
+                    objectFit: 'contain',
+                    borderRadius: '4px',
+                    backgroundColor: 'white'
+                  }}
+                />
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: 'var(--green-11)', fontWeight: '500', marginBottom: '4px' }}>
+                    ✅ อัปโหลดโลโก้แล้ว
+                  </div>
+                  <div style={{ color: 'var(--gray-10)', fontSize: '0.875rem' }}>
+                    {logoFileName}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveLogo}
+                  style={{
+                    background: 'var(--red-9)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '0.5rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <TrashIcon width={16} height={16} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -594,6 +874,151 @@ export const DataManagementRadix: React.FC<DataManagementRadixProps> = ({ dataTy
           </Flex>
         )}
       </Card>
+
+      {/* Logo Gallery Modal */}
+      {showLogoGallery && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setShowLogoGallery(false)}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              maxWidth: '600px',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              position: 'relative',
+              margin: '1rem'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '600', color: 'var(--gray-12)' }}>
+                🖼️ เลือกโลโก้จาก Gallery
+              </h3>
+              <button
+                onClick={() => setShowLogoGallery(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: 'var(--gray-10)',
+                  padding: '4px'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {loadingLogos ? (
+              <div style={{ textAlign: 'center', padding: '2rem' }}>
+                <Text color="gray">🔄 กำลังโหลดโลโก้...</Text>
+              </div>
+            ) : availableLogos.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem' }}>
+                <Text color="gray">😔 ยังไม่มีโลโก้ใน Gallery</Text>
+                <br />
+                <Text size="1" color="gray">อัปโหลดโลโก้ใหม่เพื่อเริ่มต้นใช้งาน</Text>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                  gap: '1rem'
+                }}
+              >
+                {availableLogos.map((logo, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      border: '1px solid var(--gray-6)',
+                      borderRadius: '8px',
+                      padding: '0.75rem',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      backgroundColor: 'var(--gray-1)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--blue-6)';
+                      e.currentTarget.style.backgroundColor = 'var(--blue-2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--gray-6)';
+                      e.currentTarget.style.backgroundColor = 'var(--gray-1)';
+                    }}
+                  >
+                    <img
+                      src={logo.url}
+                      alt={logo.fileName}
+                      style={{
+                        width: '80px',
+                        height: '80px',
+                        objectFit: 'contain',
+                        borderRadius: '4px',
+                        backgroundColor: 'white',
+                        marginBottom: '0.5rem'
+                      }}
+                    />
+                    <div style={{ fontSize: '0.75rem', color: 'var(--gray-11)', marginBottom: '0.5rem' }}>
+                      {logo.fileName.length > 15 ? `${logo.fileName.substring(0, 15)}...` : logo.fileName}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'center' }}>
+                      <button
+                        onClick={() => handleSelectLogoFromGallery(logo)}
+                        style={{
+                          background: 'var(--blue-9)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '0.25rem 0.5rem',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        เลือก
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm('ต้องการลบโลโก้นี้หรือไม่?')) {
+                            handleDeleteLogoFromGallery(logo);
+                          }
+                        }}
+                        style={{
+                          background: 'var(--red-9)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '0.25rem 0.5rem',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ลบ
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </Container>
   );
 };

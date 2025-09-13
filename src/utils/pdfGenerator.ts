@@ -63,6 +63,21 @@ export const exportCertificateToPDF = async (certificateNumber?: string): Promis
         if (clonedElement) {
           clonedElement.style.transform = 'none';
           clonedElement.style.position = 'static';
+          
+          // แทนที่ CSS variables ด้วยค่าสีที่ชัดเจน
+          const style = clonedDoc.createElement('style');
+          style.textContent = `
+            * {
+              --primary-color: #1e40af !important;
+              --secondary-color: #f8fafc !important;
+              --text-color: #1e293b !important;
+              --border-color: #e2e8f0 !important;
+              --background-color: #f1f5f9 !important;
+              color: #1e293b !important;
+              background-color: white !important;
+            }
+          `;
+          clonedDoc.head.appendChild(style);
         }
       }
     });
@@ -181,7 +196,7 @@ export const exportWorkDeliveryToPDF = async (deliveryNumber?: string): Promise<
     // รอให้การเปลี่ยนแปลง style มีผล
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    // สร้าง canvas จาก HTML element ด้วยการตั้งค่าที่เหมาะสมสำหรับ A4
+    // สร้าง canvas จาก HTML element ด้วยการตั้งค่าที่เหมาะสมสำหรับ A4 (เหมือนใบรับประกัน)
     console.log("🎨 เริ่มสร้าง canvas...");
     const canvas = await (html2canvas as any).default(deliveryElement, {
       scale: 2, // ลดขนาดให้เหมาะสม
@@ -193,11 +208,40 @@ export const exportWorkDeliveryToPDF = async (deliveryNumber?: string): Promise<
       removeContainer: false,
       imageTimeout: 0,
       onclone: (clonedDoc: Document) => {
-        // ปรับแต่ง cloned document
+        // ปรับแต่ง cloned document (เหมือนใบรับประกัน)
         const clonedElement = clonedDoc.getElementById('work-delivery-preview');
         if (clonedElement) {
           clonedElement.style.transform = 'none';
           clonedElement.style.position = 'static';
+          
+          // แทนที่ CSS variables ด้วยค่าสีที่ชัดเจน
+          const style = clonedDoc.createElement('style');
+          style.textContent = `
+            * {
+              --primary-color: #1e40af !important;
+              --secondary-color: #f8fafc !important;
+              --text-color: #1e293b !important;
+              --border-color: #e2e8f0 !important;
+              --background-color: #f1f5f9 !important;
+              --green-9: #10b981 !important;
+              --yellow-9: #f59e0b !important;
+              --red-9: #ef4444 !important;
+              --gray-4: #f3f4f6 !important;
+              --blue-9: #1e40af !important;
+              --blue-11: #1e3a8a !important;
+              --gray-6: #9ca3af !important;
+              --gray-9: #6b7280 !important;
+              --blue-6: #3b82f6 !important;
+              --blue-1: #dbeafe !important;
+              --green-2: #d1fae5 !important;
+              color: #1e293b !important;
+              background-color: white !important;
+            }
+            .progress-bar, [style*="background-color"] {
+              background-color: #f3f4f6 !important;
+            }
+          `;
+          clonedDoc.head.appendChild(style);
         }
       }
     });

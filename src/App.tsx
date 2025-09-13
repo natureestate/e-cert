@@ -8,7 +8,9 @@ import { DataManagementRadix } from './components/DataManagementRadix';
 import { WorkDeliveryHouse } from './components/WorkDeliveryHouse';
 import { WorkDeliveryPrecast } from './components/WorkDeliveryPrecast';
 import { WorkDeliveryHistory } from './components/WorkDeliveryHistory';
+import { PhaseManagement } from './components/PhaseManagement';
 import { CertificateDetails, WarrantyTerms, defaultWarrantyTerms } from './types/certificate';
+import { WorkDelivery, WorkDeliveryDetails } from './types/workDelivery';
 import { exportCertificateToPDF } from './utils/pdfGenerator';
 import { printCertificate } from './utils/printUtils';
 import { FirestoreService } from './services/firestoreService';
@@ -54,12 +56,17 @@ const App: React.FC = () => {
   const [isPrinting, setIsPrinting] = useState(false); // เพิ่ม state สำหรับ printing
   const [warrantyTerms, setWarrantyTerms] = useState<WarrantyTerms>(defaultWarrantyTerms);
   const [viewingCertificate, setViewingCertificate] = useState<Certificate | null>(null);
+  
+  // State สำหรับ Work Delivery viewing
+  const [viewingWorkDelivery, setViewingWorkDelivery] = useState<WorkDelivery | null>(null);
+  const [workDeliveryDetails, setWorkDeliveryDetails] = useState<WorkDeliveryDetails | null>(null);
 
   // Initialize default data when app loads
   useEffect(() => {
     const initializeData = async () => {
       try {
         await FirestoreService.initializeDefaultData();
+        await FirestoreService.initializeDefaultPhaseTemplates();
         
         // ตรวจสอบและสร้างโครงการสำหรับ "คุณทดสอบ เพิ่มข้อมูล" หากยังไม่มี
         const projects = await FirestoreService.getProjects();
@@ -231,9 +238,42 @@ const App: React.FC = () => {
         if (formData.companyId) {
           promises.push(
             FirestoreService.getCompanies().then(companies => {
-              newRelatedData.company = companies.find(c => c.id === formData.companyId) || null;
+              const selectedCompany = companies.find(c => c.id === formData.companyId) || null;
+              newRelatedData.company = selectedCompany;
+              
+              console.log('🔍 Debug บริษัทที่เลือก:', {
+                companyId: formData.companyId,
+                selectedCompany: selectedCompany,
+                logoUrl: selectedCompany?.logoUrl,
+                hasLogo: !!selectedCompany?.logoUrl
+              });
+              
+              // โหลดโลโก้อัตโนมัติเมื่อเลือกบริษัท
+              if (selectedCompany?.logoUrl && selectedCompany.logoUrl.trim() !== '') {
+                setLogoSrc(selectedCompany.logoUrl);
+                setLogoFileName('company-logo');
+                setLogoInfo({
+                  url: selectedCompany.logoUrl,
+                  fileName: 'company-logo',
+                  fullPath: '',
+                  size: 'medium',
+                  uploadedAt: new Date()
+                });
+                console.log('🏢 โหลดโลโก้บริษัทอัตโนมัติ:', selectedCompany.logoUrl);
+              } else {
+                // ล้างโลโก้หากบริษัทไม่มีโลโก้
+                setLogoSrc(null);
+                setLogoFileName(null);
+                setLogoInfo(null);
+                console.log('🏢 บริษัทไม่มีโลโก้หรือ logoUrl ว่าง:', selectedCompany?.logoUrl);
+              }
             })
           );
+        } else {
+          // ล้างโลโก้หากไม่ได้เลือกบริษัท
+          setLogoSrc(null);
+          setLogoFileName(null);
+          setLogoInfo(null);
         }
 
         if (formData.customerId) {
@@ -345,51 +385,8 @@ const App: React.FC = () => {
     generatePreview();
   }, [isFormValid, relatedData, formData.batchNumbers, formData.deliveryDate, formData.additionalNotes, viewingCertificate]);
 
-  // จัดการการอัปโหลดโลโก้
-  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      
-      // ตรวจสอบไฟล์
-      if (!LogoStorageService.isValidImageFile(file)) {
-        alert('กรุณาเลือกไฟล์รูปภาพ (PNG, JPG, SVG, WebP)');
-        return;
-      }
-      
-      if (!LogoStorageService.isValidFileSize(file)) {
-        alert('ขนาดไฟล์ต้องไม่เกิน 5MB');
-        return;
-      }
-
-      try {
-        // แสดงโลโก้ preview ทันทีด้วย FileReader
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const newLogoSrc = event.target?.result as string;
-          setLogoSrc(newLogoSrc);
-          setLogoFileName(file.name);
-        };
-        reader.readAsDataURL(file);
-
-        // อัปโหลดไปยัง Firebase Storage แบบ background
-        console.log('🔄 กำลังอัปโหลดโลโก้ไปยัง Firebase Storage...');
-        const uploadedLogoInfo = await LogoStorageService.uploadLogo(
-          file, 
-          relatedData.company?.id // ส่ง company ID หากมี
-        );
-        
-        // อัปเดต state ด้วยข้อมูลจาก Storage
-        setLogoInfo(uploadedLogoInfo);
-        setLogoSrc(uploadedLogoInfo.url);
-        setLogoFileName(uploadedLogoInfo.fileName);
-        
-        console.log('✅ อัปโหลดโลโก้สำเร็จ!', uploadedLogoInfo);
-      } catch (error) {
-        console.error('❌ เกิดข้อผิดพลาดในการอัปโหลดโลโก้:', error);
-        alert((error as Error).message);
-      }
-    }
-  };
+  // ฟังก์ชันนี้ไม่ใช้แล้วเพราะโลโก้โหลดอัตโนมัติจากบริษัท
+  // const handleLogoChange = ... (ถูกลบออกแล้ว)
 
   // ฟังก์ชันลบโลโก้
   const handleRemoveLogo = async () => {
@@ -467,30 +464,35 @@ const App: React.FC = () => {
         };
         setCertificateDetails(finalCertificateDetails);
 
-        // บันทึกใบรับประกันลง Firestore
-        await FirestoreService.createCertificate({
+        // เตรียมข้อมูลสำหรับบันทึก (ลบ undefined values)
+        const certificateData = {
           certificateNumber,
           companyId: formData.companyId,
-          companyName: relatedData.company.name,
-          companyAddress: relatedData.company.address,
-          companyPhone: relatedData.company.phone,
-          companyWebsite: relatedData.company.website,
-          companyLogoUrl: relatedData.company.logoUrl || '', // แก้ไข undefined เป็น empty string
+          companyName: relatedData.company.name || '',
+          companyAddress: relatedData.company.address || '',
+          companyPhone: relatedData.company.phone || '',
+          companyWebsite: relatedData.company.website || '',
+          ...(relatedData.company.logoUrl && { companyLogoUrl: relatedData.company.logoUrl }),
           customerId: formData.customerId,
-          customerName: relatedData.customer.name,
-          buyer: relatedData.customer.buyer, // เพิ่มผู้ซื้อสินค้า
+          customerName: relatedData.customer.name || '',
+          ...(relatedData.customer.buyer && { buyer: relatedData.customer.buyer }),
           projectId: formData.projectId,
-          projectName: relatedData.project.name,
-          projectLocation: relatedData.project.location,
-          productItems: relatedData.product.name,
+          projectName: relatedData.project.name || '',
+          projectLocation: relatedData.project.location || '',
+          productItems: relatedData.product.name || '',
           batchNumbers: formData.batchNumbers,
-          additionalNotes: formData.additionalNotes, // เพิ่มหมายเหตุเพิ่มเติม
+          ...(formData.additionalNotes && { additionalNotes: formData.additionalNotes }),
           deliveryDate: new Date(formData.deliveryDate),
           issueDate: new Date(),
           warrantyExpiration: new Date(Date.now() + (3 * 365 * 24 * 60 * 60 * 1000)), // 3 years
-          status: 'issued',
+          status: 'issued' as const,
           isActive: true,
-        });
+        };
+
+        console.log('📋 ข้อมูลใบรับประกันที่จะบันทึก:', certificateData);
+
+        // บันทึกใบรับประกันลง Firestore
+        await FirestoreService.createCertificate(certificateData);
 
         alert('✅ บันทึกใบรับประกันเรียบร้อยแล้ว!');
         console.log('Certificate saved to Firestore successfully!');
@@ -615,6 +617,44 @@ const App: React.FC = () => {
     setCurrentPage('create'); // Switch to create page to show preview
   };
 
+  // Handle viewing work delivery from history
+  const handleViewWorkDelivery = (workDelivery: WorkDelivery) => {
+    const deliveryDetails: WorkDeliveryDetails = {
+      companyName: workDelivery.companyName,
+      companyAddress: workDelivery.companyAddress,
+      companyPhone: workDelivery.companyPhone,
+      companyWebsite: workDelivery.companyWebsite,
+      projectNameAndLocation: `${workDelivery.projectName} - ${workDelivery.projectLocation}`,
+      customerName: workDelivery.customerName,
+      buyer: workDelivery.buyer,
+      workType: workDelivery.workType,
+      phases: workDelivery.phases,
+      currentPhase: workDelivery.currentPhase,
+      deliveryNumber: workDelivery.deliveryNumber,
+      issueDate: new Date(workDelivery.issueDate).toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }),
+      deliveryDate: new Date(workDelivery.deliveryDate).toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }),
+      additionalNotes: workDelivery.additionalNotes,
+    };
+    
+    setWorkDeliveryDetails(deliveryDetails);
+    setViewingWorkDelivery(workDelivery);
+    
+    // Switch to appropriate work delivery page based on work type
+    if (workDelivery.workType === 'house-construction') {
+      setCurrentPage('work-delivery-house');
+    } else {
+      setCurrentPage('work-delivery-precast');
+    }
+  };
+
   const renderCurrentPage = () => {
     switch (currentPage) {
       case 'create':
@@ -635,7 +675,6 @@ const App: React.FC = () => {
               formData={formData}
               onFormChange={handleFormChange}
               onBatchNumbersChange={handleBatchNumbersChange}
-              onLogoChange={handleLogoChange}
               onGenerate={handleGenerate}
               isFormValid={isFormValid}
               logoSrc={logoSrc}
@@ -679,13 +718,16 @@ const App: React.FC = () => {
         return <DataManagementRadix dataType="products" />;
       
       case 'work-delivery-house':
-        return <WorkDeliveryHouse />;
+        return <WorkDeliveryHouse viewingWorkDelivery={viewingWorkDelivery} workDeliveryDetails={workDeliveryDetails} />;
       
       case 'work-delivery-precast':
-        return <WorkDeliveryPrecast />;
+        return <WorkDeliveryPrecast viewingWorkDelivery={viewingWorkDelivery} workDeliveryDetails={workDeliveryDetails} />;
       
       case 'work-delivery-history':
-        return <WorkDeliveryHistory />;
+        return <WorkDeliveryHistory onViewDelivery={handleViewWorkDelivery} />;
+      
+      case 'phase-management':
+        return <PhaseManagement />;
       
       default:
         return (
@@ -712,6 +754,7 @@ const App: React.FC = () => {
         <Navigation currentPage={currentPage} onPageChange={setCurrentPage} />
         
         <Box style={{ flex: 1, overflowY: 'auto' }} role="main" aria-label="เนื้อหาหลัก">
+          {/* Header สำหรับใบรับประกัน */}
           {currentPage === 'create' && (
             <Box 
               style={{ 
@@ -752,6 +795,44 @@ const App: React.FC = () => {
                   </Button>
                 </Flex>
               )}
+            </Box>
+          )}
+
+          {/* Header สำหรับใบส่งมอบงาน */}
+          {(currentPage === 'work-delivery-house' || currentPage === 'work-delivery-precast') && viewingWorkDelivery && (
+            <Box 
+              style={{ 
+                background: 'linear-gradient(135deg, var(--green-1), var(--white))',
+                borderBottom: '1px solid var(--green-6)',
+                padding: '1.5rem 2rem',
+                boxShadow: 'var(--shadow-sm)'
+              }}
+            >
+              <Flex 
+                align="center" 
+                gap="3" 
+                style={{ 
+                  backgroundColor: 'var(--orange-3)', 
+                  border: '1px solid var(--orange-6)', 
+                  borderRadius: '8px', 
+                  padding: '0.75rem 1rem'
+                }}
+              >
+                <Text style={{ color: 'var(--orange-11)' }}>
+                  📋 กำลังดูใบส่งมอบงาน: {viewingWorkDelivery.deliveryNumber} ({viewingWorkDelivery.workType === 'house-construction' ? 'งานรับสร้างบ้าน' : 'งาน Precast Concrete'})
+                </Text>
+                <Button 
+                  size="2"
+                  variant="soft"
+                  color="gray"
+                  onClick={() => {
+                    setViewingWorkDelivery(null);
+                    setWorkDeliveryDetails(null);
+                  }}
+                >
+                  สร้างใหม่
+                </Button>
+              </Flex>
             </Box>
           )}
           

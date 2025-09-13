@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Flex, Card, Heading, Text, Button, Select, TextArea } from '@radix-ui/themes';
+import { ImageIcon, CheckIcon, Cross2Icon } from '@radix-ui/react-icons';
 import { FormSelect } from './FormSelect';
 import { FirestoreService } from '../services/firestoreService';
 import { Company, Customer, Project } from '../types/firestore';
-import { WorkType, PhaseTemplate, phaseTemplates, HouseConstructionPhase, PrecastPhase } from '../types/workDelivery';
+import { WorkType, PhaseTemplate, phaseTemplates, HouseConstructionPhase, PrecastPhase, PhaseTemplateFirestore } from '../types/workDelivery';
 
 interface WorkDeliveryFormData {
   companyId: string;
@@ -26,6 +27,17 @@ interface WorkDeliveryFormProps {
   onGenerate: () => void;
   isFormValid: boolean;
   isViewingMode?: boolean;
+  
+  // Phase Template props
+  onPhaseTemplateChange?: (templateId: string) => void;
+  
+  // Logo props
+  logoSrc?: string | null;
+  logoFileName?: string | null;
+  logoSize?: 'small' | 'medium' | 'large';
+  onLogoSizeChange?: (size: 'small' | 'medium' | 'large') => void;
+  onRemoveLogo?: () => void;
+  onSelectLogoFromGallery?: (logoInfo: any) => void;
 }
 
 export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
@@ -37,23 +49,33 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
   phases,
   onGenerate,
   isFormValid,
-  isViewingMode = false
+  isViewingMode = false,
+  onPhaseTemplateChange,
+  logoSrc,
+  logoFileName,
+  logoSize = 'medium',
+  onLogoSizeChange,
+  onRemoveLogo,
+  onSelectLogoFromGallery
 }) => {
   // State สำหรับ dropdown options
   const [companies, setCompanies] = useState<Company[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
+  const [phaseTemplates, setPhaseTemplates] = useState<PhaseTemplateFirestore[]>([]);
+  const [filteredPhaseTemplates, setFilteredPhaseTemplates] = useState<PhaseTemplateFirestore[]>([]);
   const [loading, setLoading] = useState(true);
 
   // โหลดข้อมูลเมื่อ component mount
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [companiesData, customersData, projectsData] = await Promise.all([
+        const [companiesData, customersData, projectsData, phaseTemplatesData] = await Promise.all([
           FirestoreService.getCompanies(),
           FirestoreService.getCustomers(),
-          FirestoreService.getProjects()
+          FirestoreService.getProjects(),
+          FirestoreService.getPhaseTemplates()
         ]);
         
         // Data loaded successfully
@@ -61,6 +83,7 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
         setCompanies(companiesData);
         setCustomers(customersData);
         setProjects(projectsData);
+        setPhaseTemplates(phaseTemplatesData);
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -86,23 +109,29 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
     }
   }, [formData.customerId, projects]);
 
-  // จัดการการเปลี่ยนประเภทงาน
-  const handleWorkTypeChange = (value: string) => {
-    const workType = value as WorkType;
-    onWorkTypeChange(workType);
-  };
+  // กรองเทมเพลตงวดงานตามประเภทงานและประเภทอาคาร
+  useEffect(() => {
+    if (formData.workType) {
+      const filtered = phaseTemplates.filter(template => {
+        if (template.workType !== formData.workType) return false;
+        
+        if (formData.workType === 'house-construction' && formData.buildingType) {
+          return template.buildingType === formData.buildingType;
+        }
+        
+        return true;
+      });
+      setFilteredPhaseTemplates(filtered);
+    } else {
+      setFilteredPhaseTemplates([]);
+    }
+  }, [formData.workType, formData.buildingType, phaseTemplates]);
 
   // จัดการการเปลี่ยนประเภทอาคาร
   const handleBuildingTypeChange = (value: string) => {
     const buildingType = value as 'single-story' | 'two-story';
     onBuildingTypeChange(buildingType);
   };
-
-  // ตัวเลือกประเภทงาน
-  const workTypeOptions = [
-    { value: 'house-construction', label: 'งานรับสร้างบ้าน' },
-    { value: 'precast-concrete', label: 'งาน Precast Concrete' }
-  ];
 
   // ตัวเลือกประเภทอาคาร (สำหรับงานรับสร้างบ้าน)
   const buildingTypeOptions = [
@@ -140,6 +169,88 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
               />
             </Box>
 
+            {/* Logo Display Section - แสดงโลโก้จากบริษัทที่เลือก */}
+            <Box mb="6">
+              <Flex align="center" gap="2" mb="3">
+                <ImageIcon width="18" height="18" color="var(--blue-9)" />
+                <Text as="label" size="3" weight="medium" style={{ color: 'var(--blue-11)' }}>
+                  โลโก้บริษัท
+                </Text>
+              </Flex>
+              
+              {!logoSrc ? (
+                // แสดงข้อความเมื่อไม่มีโลโก้
+                <Box
+                  style={{
+                    border: '2px dashed var(--gray-6)',
+                    borderRadius: '12px',
+                    padding: '1.5rem',
+                    backgroundColor: 'var(--gray-2)',
+                    textAlign: 'center'
+                  }}
+                >
+                  <ImageIcon width="32" height="32" color="var(--gray-9)" style={{ margin: '0 auto 8px' }} />
+                  <Text size="3" color="gray" weight="medium" style={{ display: 'block', marginBottom: '4px' }}>
+                    เลือกบริษัทเพื่อแสดงโลโก้
+                      </Text>
+                      <Text size="2" color="gray">
+                        โลโก้จะแสดงอัตโนมัติจากข้อมูลบริษัท
+                      </Text>
+                    </Box>
+              ) : (
+                // UI สำหรับแสดงโลโก้จากบริษัท
+                <Box>
+                  <Flex align="center" gap="3" p="3" style={{ 
+                    border: '1px solid var(--blue-6)', 
+                    borderRadius: '8px', 
+                    backgroundColor: 'var(--blue-1)' 
+                  }}>
+                    <img 
+                      src={logoSrc} 
+                      alt="Company Logo" 
+                      style={{ 
+                        width: '48px', 
+                        height: '48px', 
+                        objectFit: 'contain',
+                        borderRadius: '4px'
+                      }}
+                    />
+                    <Box style={{ flex: 1 }}>
+                      <Text size="2" weight="medium" color="blue">
+                        🏢 โลโก้บริษัท
+                      </Text>
+                      <Text size="2" color="gray" style={{ display: 'block' }}>
+                        โหลดจากข้อมูลบริษัท
+                      </Text>
+                    </Box>
+                  </Flex>
+                  
+                  {/* ตัวเลือกขนาดโลโก้ */}
+                  {onLogoSizeChange && !isViewingMode && (
+                    <Box mt="3">
+                      <Text size="2" weight="medium" mb="2" style={{ display: 'block' }}>
+                        ขนาดโลโก้ในใบส่งมอบ:
+                      </Text>
+                      <Flex gap="2">
+                        {(['small', 'medium', 'large'] as const).map((size) => (
+                          <Button
+                            key={size}
+                            size="1"
+                            variant={logoSize === size ? 'solid' : 'soft'}
+                            onClick={() => onLogoSizeChange && onLogoSizeChange(size)}
+                          >
+                            {size === 'small' && 'เล็ก'}
+                            {size === 'medium' && 'กลาง'}
+                            {size === 'large' && 'ใหญ่'}
+                          </Button>
+                        ))}
+                      </Flex>
+                    </Box>
+                  )}
+                </Box>
+              )}
+            </Box>
+
             <Box mb="4">
               <FormSelect
                 label="ลูกค้า *"
@@ -164,32 +275,6 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
               />
             </Box>
 
-            <Box mb="4">
-              <Text as="label" size="2" weight="medium" mb="2" style={{ display: 'block' }}>
-                ประเภทงาน *
-              </Text>
-              <Select.Root
-                value={formData.workType}
-                onValueChange={handleWorkTypeChange}
-                disabled={isViewingMode}
-              >
-                <Select.Trigger
-                  style={{
-                    width: '100%',
-                    zIndex: 1000,
-                    position: 'relative'
-                  }}
-                  placeholder="เลือกประเภทงาน"
-                />
-                <Select.Content style={{ zIndex: 1001 }}>
-                  {workTypeOptions.map(option => (
-                    <Select.Item key={option.value} value={option.value}>
-                      {option.label}
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
-            </Box>
 
             <Box mb="4">
               <Text as="label" size="2" weight="medium" mb="2" style={{ display: 'block' }}>
@@ -239,6 +324,46 @@ export const WorkDeliveryForm: React.FC<WorkDeliveryFormProps> = ({
                     ))}
                   </Select.Content>
                 </Select.Root>
+              </Box>
+            )}
+
+            {/* เลือกเทมเพลตงวดงาน */}
+            {filteredPhaseTemplates.length > 0 && !isViewingMode && (
+              <Box mb="4">
+                <Text as="label" size="2" weight="medium" mb="2" style={{ display: 'block' }}>
+                  เลือกเทมเพลตงวดงาน
+                </Text>
+                <Select.Root
+                  onValueChange={(value) => onPhaseTemplateChange && onPhaseTemplateChange(value)}
+                >
+                  <Select.Trigger
+                    style={{
+                      width: '100%',
+                      zIndex: 1000,
+                      position: 'relative'
+                    }}
+                    placeholder="เลือกเทมเพลตงวดงาน (ไม่บังคับ)"
+                  />
+                  <Select.Content style={{ zIndex: 1001 }}>
+                    {filteredPhaseTemplates.map(template => (
+                      <Select.Item key={template.id} value={template.id}>
+                        <Box>
+                          <Text size="2" weight="medium" style={{ display: 'block' }}>
+                            {template.name}
+                          </Text>
+                          {template.description && (
+                            <Text size="1" color="gray" style={{ display: 'block' }}>
+                              {template.description} ({template.phases.length} งวด)
+                            </Text>
+                          )}
+                        </Box>
+                      </Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Root>
+                <Text size="1" color="gray" mt="1" style={{ display: 'block' }}>
+                  💡 เลือกเทมเพลตเพื่อโหลดงวดงานที่กำหนดไว้ล่วงหน้า
+                </Text>
               </Box>
             )}
           </Box>

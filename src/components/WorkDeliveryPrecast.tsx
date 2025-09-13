@@ -3,16 +3,25 @@ import { Box, Flex, Heading, Text, Button } from '@radix-ui/themes';
 import { WorkDeliveryForm } from './WorkDeliveryForm';
 import { WorkDeliveryPreview } from './WorkDeliveryPreview';
 import { FirestoreService } from '../services/firestoreService';
+import { LogoStorageService } from '../services/logoStorageService';
 import { Company, Customer, Project } from '../types/firestore';
 import { 
   WorkType, 
+  WorkDelivery,
   WorkDeliveryDetails, 
   PrecastPhase, 
   defaultPrecastPhases,
-  phaseTemplates 
+  phaseTemplates,
+  PhaseTemplateFirestore
 } from '../types/workDelivery';
 import { exportWorkDeliveryToPDF } from '../utils/pdfGenerator';
 import { printWorkDelivery } from '../utils/printUtils';
+
+interface LogoInfo {
+  url: string;
+  fileName: string;
+  size: 'small' | 'medium' | 'large';
+}
 
 interface FormData {
   companyId: string;
@@ -25,7 +34,15 @@ interface FormData {
   additionalNotes: string;
 }
 
-export const WorkDeliveryPrecast: React.FC = () => {
+interface WorkDeliveryPrecastProps {
+  viewingWorkDelivery?: WorkDelivery | null;
+  workDeliveryDetails?: WorkDeliveryDetails | null;
+}
+
+export const WorkDeliveryPrecast: React.FC<WorkDeliveryPrecastProps> = ({ 
+  viewingWorkDelivery,
+  workDeliveryDetails 
+}) => {
   // State สำหรับแบบฟอร์ม
   const [formData, setFormData] = useState<FormData>({
     companyId: '',
@@ -41,6 +58,12 @@ export const WorkDeliveryPrecast: React.FC = () => {
   // State สำหรับงวดงาน
   const [phases, setPhases] = useState<PrecastPhase[]>([]);
   const [deliveryDetails, setDeliveryDetails] = useState<WorkDeliveryDetails | null>(null);
+  
+  // State สำหรับโลโก้
+  const [logoSrc, setLogoSrc] = useState<string | null>(null);
+  const [logoSize, setLogoSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const [logoFileName, setLogoFileName] = useState<string | null>(null);
+  const [logoInfo, setLogoInfo] = useState<LogoInfo | null>(null);
   
   // State สำหรับข้อมูลที่ดึงมาจาก Firestore
   const [relatedData, setRelatedData] = useState<{
@@ -77,6 +100,44 @@ export const WorkDeliveryPrecast: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  // ฟังก์ชันนี้ไม่ใช้แล้วเพราะโลโก้โหลดอัตโนมัติจากบริษัท
+  // const handleLogoChange = ... (ถูกลบออกแล้ว)
+
+  // จัดการการเปลี่ยนขนาดโลโก้
+  const handleLogoSizeChange = (size: 'small' | 'medium' | 'large') => {
+    setLogoSize(size);
+    if (logoInfo) {
+      setLogoInfo({
+        ...logoInfo,
+        size
+      });
+    }
+  };
+
+  // จัดการการลบโลโก้
+  const handleRemoveLogo = async () => {
+    if (logoInfo?.url) {
+      try {
+        await LogoStorageService.deleteLogo(logoInfo.url);
+        console.log('🗑️ ลบโลโก้สำเร็จ');
+      } catch (error) {
+        console.error('Error deleting logo:', error);
+      }
+    }
+    
+    setLogoSrc(null);
+    setLogoFileName(null);
+    setLogoInfo(null);
+  };
+
+  // จัดการการเลือกโลโก้จาก gallery
+  const handleSelectLogoFromGallery = (selectedLogoInfo: LogoInfo) => {
+    setLogoSrc(selectedLogoInfo.url);
+    setLogoFileName(selectedLogoInfo.fileName);
+    setLogoSize(selectedLogoInfo.size);
+    setLogoInfo(selectedLogoInfo);
+  };
+
   // จัดการการเปลี่ยนประเภทงาน (ล็อกไว้ที่ precast-concrete)
   const handleWorkTypeChange = (workType: WorkType) => {
     // สำหรับ Precast จะล็อกไว้ที่ precast-concrete เท่านั้น
@@ -91,7 +152,7 @@ export const WorkDeliveryPrecast: React.FC = () => {
     setFormData(prev => ({ ...prev, buildingType }));
   };
 
-  // โหลดงวดงานตามประเภทงาน
+  // โหลดงวดงานตามประเภทงาน (จากเทมเพลตเริ่มต้น)
   const loadPhasesByWorkType = (workType: WorkType) => {
     let selectedTemplate = phaseTemplates.find(template => 
       template.workType === workType
@@ -105,6 +166,26 @@ export const WorkDeliveryPrecast: React.FC = () => {
       const currentPhaseNumber = currentPhaseIndex !== -1 ? currentPhaseIndex + 1 : selectedTemplate.phases.length;
       
       setFormData(prev => ({ ...prev, currentPhase: currentPhaseNumber }));
+    }
+  };
+
+  // โหลดงวดงานจากเทมเพลต
+  const handlePhaseTemplateChange = async (templateId: string) => {
+    try {
+      const template = await FirestoreService.getPhaseTemplateById(templateId);
+      if (template) {
+        console.log('🔄 โหลดเทมเพลตงวดงาน:', template.name);
+        setPhases([...template.phases] as PrecastPhase[]);
+        
+        // หาตำแหน่งงวดปัจจุบัน (งวดแรกที่ยังไม่เสร็จ)
+        const currentPhaseIndex = template.phases.findIndex(phase => !phase.isCompleted);
+        const currentPhaseNumber = currentPhaseIndex !== -1 ? currentPhaseIndex + 1 : template.phases.length;
+        
+        setFormData(prev => ({ ...prev, currentPhase: currentPhaseNumber }));
+      }
+    } catch (error) {
+      console.error('Error loading phase template:', error);
+      alert('เกิดข้อผิดพลาดในการโหลดเทมเพลตงวดงาน');
     }
   };
 
@@ -150,9 +231,35 @@ export const WorkDeliveryPrecast: React.FC = () => {
         if (formData.companyId) {
           promises.push(
             FirestoreService.getCompanies().then(companies => {
-              newRelatedData.company = companies.find(c => c.id === formData.companyId) || null;
+              const selectedCompany = companies.find(c => c.id === formData.companyId) || null;
+              newRelatedData.company = selectedCompany;
+              
+              // โหลดโลโก้อัตโนมัติเมื่อเลือกบริษัท
+              if (selectedCompany?.logoUrl) {
+                setLogoSrc(selectedCompany.logoUrl);
+                setLogoFileName('company-logo');
+                setLogoInfo({
+                  url: selectedCompany.logoUrl,
+                  fileName: 'company-logo',
+                  fullPath: '',
+                  size: 'medium',
+                  uploadedAt: new Date()
+                });
+                console.log('🏢 โหลดโลโก้บริษัทอัตโนมัติ:', selectedCompany.logoUrl);
+              } else {
+                // ล้างโลโก้หากบริษัทไม่มีโลโก้
+                setLogoSrc(null);
+                setLogoFileName(null);
+                setLogoInfo(null);
+                console.log('🏢 บริษัทไม่มีโลโก้');
+              }
             })
           );
+        } else {
+          // ล้างโลโก้หากไม่ได้เลือกบริษัท
+          setLogoSrc(null);
+          setLogoFileName(null);
+          setLogoInfo(null);
         }
 
         if (formData.customerId) {
@@ -255,6 +362,71 @@ export const WorkDeliveryPrecast: React.FC = () => {
     }
   }, []);
 
+  // ตั้งค่า deliveryDetails เมื่อมีการดูใบส่งมอบจาก history
+  useEffect(() => {
+    if (workDeliveryDetails && viewingWorkDelivery) {
+      console.log('🔄 Loading work delivery from history:', workDeliveryDetails.deliveryNumber);
+      setDeliveryDetails(workDeliveryDetails);
+      setPhases(viewingWorkDelivery.phases as PrecastPhase[]);
+      
+      // ⭐ ตั้งค่า formData ให้ตรงกับข้อมูลจาก history เพื่อให้ preview ทำงาน
+      setFormData({
+        companyId: viewingWorkDelivery.companyId,
+        customerId: viewingWorkDelivery.customerId,
+        projectId: viewingWorkDelivery.projectId,
+        workType: viewingWorkDelivery.workType,
+        buildingType: viewingWorkDelivery.buildingType as 'single-story' | 'two-story' | undefined,
+        currentPhase: viewingWorkDelivery.currentPhase,
+        deliveryDate: viewingWorkDelivery.deliveryDate.toISOString().split('T')[0],
+        additionalNotes: viewingWorkDelivery.additionalNotes || '',
+      });
+
+      // ⭐ ตั้งค่า relatedData โดยตรงจากข้อมูลใน viewingWorkDelivery
+      setRelatedData({
+        company: {
+          id: viewingWorkDelivery.companyId,
+          name: viewingWorkDelivery.companyName,
+          address: viewingWorkDelivery.companyAddress,
+          phone: viewingWorkDelivery.companyPhone,
+          website: viewingWorkDelivery.companyWebsite,
+          logoUrl: viewingWorkDelivery.companyLogoUrl,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        customer: {
+          id: viewingWorkDelivery.customerId,
+          name: viewingWorkDelivery.customerName,
+          buyer: viewingWorkDelivery.buyer,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        project: {
+          id: viewingWorkDelivery.projectId,
+          name: viewingWorkDelivery.projectName,
+          location: viewingWorkDelivery.projectLocation,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      });
+      
+      // ตั้งค่าโลโก้หากมี
+      if (viewingWorkDelivery.companyLogoUrl) {
+        setLogoSrc(viewingWorkDelivery.companyLogoUrl);
+        setLogoFileName('company-logo');
+        setLogoInfo({
+          url: viewingWorkDelivery.companyLogoUrl,
+          fileName: 'company-logo',
+          size: 'medium'
+        });
+      }
+
+      console.log('✅ โหลดข้อมูลจาก history สำเร็จ - preview จะแสดงอัตโนมัติ');
+    }
+  }, [workDeliveryDetails, viewingWorkDelivery]);
+
   // บันทึกใบส่งมอบงวดงาน
   const handleGenerate = async () => {
     console.log('🔘 กดปุ่มบันทึกใบส่งมอบงวดงาน Precast');
@@ -266,26 +438,137 @@ export const WorkDeliveryPrecast: React.FC = () => {
     }
 
     try {
-      // สร้างหมายเลขใบส่งมอบจริง
-      const deliveryNumber = `WD-PRECAST-${Date.now()}`;
-      
-      // TODO: บันทึกลง Firestore (รอการเพิ่ม Firestore Service สำหรับ Work Delivery)
-      console.log('📋 ข้อมูลที่จะบันทึก:', {
-        deliveryNumber,
+      // ฟังก์ชันลบ undefined values ออกจาก object อย่างละเอียด
+      const cleanObject = (obj: any): any => {
+        if (obj === null || obj === undefined) {
+          return undefined;
+        }
+        
+        if (Array.isArray(obj)) {
+          return obj.map(item => cleanObject(item)).filter(item => item !== undefined);
+        }
+        
+        if (typeof obj === 'object' && obj.constructor === Object) {
+          const cleaned: any = {};
+          Object.keys(obj).forEach(key => {
+            const value = cleanObject(obj[key]);
+            if (value !== undefined && value !== null && value !== '') {
+              cleaned[key] = value;
+            }
+          });
+          return Object.keys(cleaned).length > 0 ? cleaned : undefined;
+        }
+        
+        return obj;
+      };
+
+      // ฟังก์ชันตรวจสอบความครบถ้วนของข้อมูล
+      const validateRequiredFields = (data: any) => {
+        const requiredFields = [
+          'workType', 'companyId', 'companyName', 'customerId', 'customerName',
+          'projectId', 'projectName', 'projectLocation', 'phases', 'deliveryDate'
+        ];
+        
+        const missingFields = requiredFields.filter(field => !data[field]);
+        
+        if (missingFields.length > 0) {
+          throw new Error(`ข้อมูลที่จำเป็นไม่ครบถ้วน: ${missingFields.join(', ')}`);
+        }
+
+        // ตรวจสอบงวดงาน
+        if (!Array.isArray(data.phases) || data.phases.length === 0) {
+          throw new Error('ต้องมีอย่างน้อย 1 งวดงาน');
+        }
+
+        // ตรวจสอบวันที่
+        if (isNaN(Date.parse(data.deliveryDate))) {
+          throw new Error('วันที่ส่งมอบไม่ถูกต้อง');
+        }
+
+        return true;
+      };
+
+      // เตรียมข้อมูลสำหรับบันทึก (ลบ undefined values)
+      const rawWorkDeliveryData = {
         workType: formData.workType,
+        // ไม่ส่ง buildingType สำหรับ precast เพราะไม่ต้องใช้
+        
+        // ข้อมูลบริษัท
         companyId: formData.companyId,
+        companyName: relatedData.company.name || '',
+        companyAddress: relatedData.company.address || '',
+        companyPhone: relatedData.company.phone || '',
+        companyWebsite: relatedData.company.website || '',
+        companyLogoUrl: relatedData.company.logoUrl,
+        
+        // ข้อมูลลูกค้า
         customerId: formData.customerId,
+        customerName: relatedData.customer.name || '',
+        buyer: relatedData.customer.buyer,
+        
+        // ข้อมูลโครงการ
         projectId: formData.projectId,
+        projectName: relatedData.project.name || '',
+        projectLocation: relatedData.project.location || '',
+        
+        // งวดงาน
         phases: phases,
         currentPhase: formData.currentPhase,
+        
+        // วันที่
+        issueDate: new Date(),
         deliveryDate: new Date(formData.deliveryDate),
+        
+        // หมายเหตุ
         additionalNotes: formData.additionalNotes,
-      });
+        
+        // สถานะ
+        status: 'draft',
+        isActive: true
+      };
 
-      alert('✅ บันทึกใบส่งมอบงวดงาน Precast เรียบร้อยแล้ว!\n(ฟีเจอร์บันทึกลงฐานข้อมูลจะเพิ่มในขั้นตอนถัดไป)');
+      // ทำความสะอาดข้อมูลโดยลบฟิลด์ที่เป็น undefined
+      const workDeliveryData = cleanObject(rawWorkDeliveryData);
+
+      // Debug: ตรวจสอบข้อมูลก่อนและหลังทำความสะอาด
+      console.log('🔍 ข้อมูลก่อนทำความสะอาด:', rawWorkDeliveryData);
+      console.log('🧹 ข้อมูลหลังทำความสะอาด:', workDeliveryData);
+      
+      // ตรวจสอบว่ายังมี undefined values หรือไม่
+      const hasUndefined = JSON.stringify(workDeliveryData).includes('undefined');
+      if (hasUndefined) {
+        console.error('❌ ยังมี undefined values ในข้อมูล:', workDeliveryData);
+        throw new Error('ข้อมูลยังไม่ถูกต้อง มี undefined values');
+      }
+
+      // ตรวจสอบความครบถ้วนของข้อมูลก่อนบันทึก
+      validateRequiredFields(workDeliveryData);
+
+      console.log('✅ ข้อมูลที่จะบันทึก (ผ่านการตรวจสอบแล้ว):', workDeliveryData);
+
+      // บันทึกลง Firestore
+      const savedId = await FirestoreService.createWorkDelivery(workDeliveryData);
+      
+      console.log('✅ บันทึกสำเร็จ ID:', savedId);
+      alert(`✅ บันทึกใบส่งมอบงวดงาน Precast เรียบร้อยแล้ว!\nID: ${savedId}`);
+
+      // รีเซ็ตฟอร์มหลังบันทึกสำเร็จ
+      setFormData({
+        companyId: '',
+        customerId: '',
+        projectId: '',
+        workType: 'precast-concrete',
+        buildingType: undefined,
+        currentPhase: 1,
+        deliveryDate: '',
+        additionalNotes: '',
+      });
+      setPhases([...defaultPrecastPhases]);
+      setDeliveryDetails(null);
+      
     } catch (error) {
       console.error('Error generating work delivery:', error);
-      alert('เกิดข้อผิดพลาดในการสร้างใบส่งมอบงวดงาน');
+      alert('เกิดข้อผิดพลาดในการสร้างใบส่งมอบงวดงาน: ' + (error as Error).message);
     }
   };
 
@@ -415,10 +698,19 @@ export const WorkDeliveryPrecast: React.FC = () => {
           phases={phases}
           onGenerate={handleGenerate}
           isFormValid={isFormValid}
+          onPhaseTemplateChange={handlePhaseTemplateChange}
+          logoSrc={logoSrc}
+          logoFileName={logoFileName}
+          logoSize={logoSize}
+          onLogoSizeChange={handleLogoSizeChange}
+          onRemoveLogo={handleRemoveLogo}
+          onSelectLogoFromGallery={handleSelectLogoFromGallery}
         />
         
         <WorkDeliveryPreview
           deliveryDetails={deliveryDetails}
+          logoSrc={logoSrc}
+          logoSize={logoSize}
           onExportPDF={handleExportPDF}
           onPrint={handlePrint}
           isExporting={isExporting}

@@ -11,7 +11,8 @@ import {
   where, 
   orderBy,
   Timestamp,
-  DocumentReference
+  DocumentReference,
+  setDoc
 } from 'firebase/firestore';
 import { 
   getStorage, 
@@ -32,9 +33,27 @@ import {
   FormDropdownData,
   COLLECTIONS
 } from '../types/firestore';
+import { PhaseTemplateFirestore } from '../types/workDelivery';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
+
+// ฟังก์ชันสร้าง Document ID รูปแบบ UUID YY MM DD
+const generateDocumentId = (): string => {
+  const now = new Date();
+  const year = now.getFullYear().toString().slice(-2); // เอาปีสองหลักสุดท้าย
+  const month = (now.getMonth() + 1).toString().padStart(2, '0'); // เดือนสองหลัก
+  const day = now.getDate().toString().padStart(2, '0'); // วันสองหลัก
+  
+  // สร้าง UUID ง่ายๆ สำหรับส่วนที่เหลือ
+  const chars = '0123456789ABCDEF';
+  let uuid = '';
+  for (let i = 0; i < 8; i++) {
+    uuid += chars[Math.floor(Math.random() * 16)];
+  }
+  
+  return `${year}${month}${day}-${uuid}`;
+};
 
 // Helper function to convert Firestore timestamps
 const convertTimestamp = (data: any) => {
@@ -67,12 +86,22 @@ export class FirestoreService {
 
   static async createCompany(company: Omit<Company, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     const now = new Date();
-    const docRef = await addDoc(collection(db, COLLECTIONS.COMPANIES), {
+    const customId = generateDocumentId();
+    const docRef = doc(db, COLLECTIONS.COMPANIES, customId);
+    await setDoc(docRef, {
       ...company,
       createdAt: now,
       updatedAt: now
     });
-    return docRef.id;
+    return customId;
+  }
+
+  static async updateCompany(id: string, updates: Partial<Omit<Company, 'id' | 'createdAt'>>): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.COMPANIES, id);
+    await updateDoc(docRef, {
+      ...updates,
+      updatedAt: new Date()
+    });
   }
 
   // Customers
@@ -92,12 +121,22 @@ export class FirestoreService {
 
   static async createCustomer(customer: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     const now = new Date();
-    const docRef = await addDoc(collection(db, COLLECTIONS.CUSTOMERS), {
+    const customId = generateDocumentId();
+    const docRef = doc(db, COLLECTIONS.CUSTOMERS, customId);
+    await setDoc(docRef, {
       ...customer,
       createdAt: now,
       updatedAt: now
     });
-    return docRef.id;
+    return customId;
+  }
+
+  static async updateCustomer(id: string, updates: Partial<Omit<Customer, 'id' | 'createdAt'>>): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.CUSTOMERS, id);
+    await updateDoc(docRef, {
+      ...updates,
+      updatedAt: new Date()
+    });
   }
 
   // Projects
@@ -132,12 +171,22 @@ export class FirestoreService {
 
   static async createProject(project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     const now = new Date();
-    const docRef = await addDoc(collection(db, COLLECTIONS.PROJECTS), {
+    const customId = generateDocumentId();
+    const docRef = doc(db, COLLECTIONS.PROJECTS, customId);
+    await setDoc(docRef, {
       ...project,
       createdAt: now,
       updatedAt: now
     });
-    return docRef.id;
+    return customId;
+  }
+
+  static async updateProject(id: string, updates: Partial<Omit<Project, 'id' | 'createdAt'>>): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.PROJECTS, id);
+    await updateDoc(docRef, {
+      ...updates,
+      updatedAt: new Date()
+    });
   }
 
   // Products
@@ -157,12 +206,22 @@ export class FirestoreService {
 
   static async createProduct(product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     const now = new Date();
-    const docRef = await addDoc(collection(db, COLLECTIONS.PRODUCTS), {
+    const customId = generateDocumentId();
+    const docRef = doc(db, COLLECTIONS.PRODUCTS, customId);
+    await setDoc(docRef, {
       ...product,
       createdAt: now,
       updatedAt: now
     });
-    return docRef.id;
+    return customId;
+  }
+
+  static async updateProduct(id: string, updates: Partial<Omit<Product, 'id' | 'createdAt'>>): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.PRODUCTS, id);
+    await updateDoc(docRef, {
+      ...updates,
+      updatedAt: new Date()
+    });
   }
 
   // Batch Numbers
@@ -182,12 +241,22 @@ export class FirestoreService {
 
   static async createBatchNumber(batch: Omit<BatchNumber, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     const now = new Date();
-    const docRef = await addDoc(collection(db, COLLECTIONS.BATCH_NUMBERS), {
+    const customId = generateDocumentId();
+    const docRef = doc(db, COLLECTIONS.BATCH_NUMBERS, customId);
+    await setDoc(docRef, {
       ...batch,
       createdAt: now,
       updatedAt: now
     });
-    return docRef.id;
+    return customId;
+  }
+
+  static async updateBatchNumber(id: string, updates: Partial<Omit<BatchNumber, 'id' | 'createdAt'>>): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.BATCH_NUMBERS, id);
+    await updateDoc(docRef, {
+      ...updates,
+      updatedAt: new Date()
+    });
   }
 
   // Certificates
@@ -205,12 +274,14 @@ export class FirestoreService {
 
   static async createCertificate(certificate: Omit<Certificate, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     const now = new Date();
-    const docRef = await addDoc(collection(db, COLLECTIONS.CERTIFICATES), {
+    const customId = generateDocumentId();
+    const docRef = doc(db, COLLECTIONS.CERTIFICATES, customId);
+    await setDoc(docRef, {
       ...certificate,
       createdAt: now,
       updatedAt: now
     });
-    return docRef.id;
+    return customId;
   }
 
   static async updateCertificate(id: string, updates: Partial<Certificate>): Promise<void> {
@@ -435,14 +506,35 @@ export class FirestoreService {
     }));
   }
 
+  static async getWorkDeliveryById(id: string): Promise<any | null> {
+    const docRef = doc(db, COLLECTIONS.WORK_DELIVERIES, id);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      return convertTimestamp({
+        id: docSnap.id,
+        ...docSnap.data()
+      });
+    }
+    return null;
+  }
+
   static async createWorkDelivery(delivery: any): Promise<string> {
     const now = new Date();
-    const docRef = await addDoc(collection(db, COLLECTIONS.WORK_DELIVERIES), {
+    const customId = generateDocumentId();
+    
+    // สร้างหมายเลขใบส่งมอบ
+    const deliveryNumber = `WD-${delivery.workType.toUpperCase()}-${customId}`;
+    
+    const docRef = doc(db, COLLECTIONS.WORK_DELIVERIES, customId);
+    await setDoc(docRef, {
       ...delivery,
+      id: customId,
+      deliveryNumber,
       createdAt: now,
       updatedAt: now
     });
-    return docRef.id;
+    return customId;
   }
 
   static async updateWorkDelivery(id: string, updates: any): Promise<void> {
@@ -451,5 +543,120 @@ export class FirestoreService {
       ...updates,
       updatedAt: new Date()
     });
+  }
+
+  static async deleteWorkDelivery(id: string): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.WORK_DELIVERIES, id);
+    await updateDoc(docRef, {
+      isActive: false,
+      updatedAt: new Date()
+    });
+  }
+
+  // Phase Templates
+  static async getPhaseTemplates(): Promise<PhaseTemplateFirestore[]> {
+    const querySnapshot = await getDocs(
+      query(collection(db, COLLECTIONS.PHASE_TEMPLATES), 
+            where('isActive', '==', true),
+            orderBy('workType', 'asc'),
+            orderBy('createdAt', 'desc'))
+    );
+    return querySnapshot.docs.map(doc => convertTimestamp({
+      id: doc.id,
+      ...doc.data()
+    }) as PhaseTemplateFirestore);
+  }
+
+  static async getPhaseTemplateById(id: string): Promise<PhaseTemplateFirestore | null> {
+    const docRef = doc(db, COLLECTIONS.PHASE_TEMPLATES, id);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      return convertTimestamp({
+        id: docSnap.id,
+        ...docSnap.data()
+      }) as PhaseTemplateFirestore;
+    }
+    return null;
+  }
+
+  static async createPhaseTemplate(template: Omit<PhaseTemplateFirestore, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    const now = new Date();
+    const customId = generateDocumentId();
+    const docRef = doc(db, COLLECTIONS.PHASE_TEMPLATES, customId);
+    await setDoc(docRef, {
+      ...template,
+      createdAt: now,
+      updatedAt: now
+    });
+    return customId;
+  }
+
+  static async updatePhaseTemplate(id: string, updates: Partial<Omit<PhaseTemplateFirestore, 'id' | 'createdAt'>>): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.PHASE_TEMPLATES, id);
+    await updateDoc(docRef, {
+      ...updates,
+      updatedAt: new Date()
+    });
+  }
+
+  static async deletePhaseTemplate(id: string): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.PHASE_TEMPLATES, id);
+    await updateDoc(docRef, {
+      isActive: false,
+      updatedAt: new Date()
+    });
+  }
+
+  // Initialize default phase templates
+  static async initializeDefaultPhaseTemplates(): Promise<void> {
+    try {
+      const existingTemplates = await this.getPhaseTemplates();
+      if (existingTemplates.length > 0) {
+        console.log('Phase templates already exist');
+        return;
+      }
+
+      console.log('Creating default phase templates...');
+
+      // สร้าง default templates จากข้อมูลเดิม
+      const { defaultHouseConstructionPhases, defaultPrecastPhases } = await import('../types/workDelivery');
+
+      // Template สำหรับบ้าน 1 ชั้น
+      await this.createPhaseTemplate({
+        name: 'งานรับสร้างบ้าน 1 ชั้น (เทมเพลตมาตรฐาน)',
+        workType: 'house-construction',
+        buildingType: 'single-story',
+        description: 'เทมเพลตงวดงานมาตรฐานสำหรับงานรับสร้างบ้าน 1 ชั้น',
+        phases: defaultHouseConstructionPhases.slice(0, 8),
+        isActive: true,
+        isDefault: true
+      });
+
+      // Template สำหรับบ้าน 2 ชั้น
+      await this.createPhaseTemplate({
+        name: 'งานรับสร้างบ้าน 2 ชั้น (เทมเพลตมาตรฐาน)',
+        workType: 'house-construction',
+        buildingType: 'two-story',
+        description: 'เทมเพลตงวดงานมาตรฐานสำหรับงานรับสร้างบ้าน 2 ชั้น',
+        phases: defaultHouseConstructionPhases,
+        isActive: true,
+        isDefault: true
+      });
+
+      // Template สำหรับ Precast Concrete
+      await this.createPhaseTemplate({
+        name: 'งาน Precast Concrete (เทมเพลตมาตรฐาน)',
+        workType: 'precast-concrete',
+        description: 'เทมเพลตงวดงานมาตรฐานสำหรับงาน Precast Concrete',
+        phases: defaultPrecastPhases,
+        isActive: true,
+        isDefault: true
+      });
+
+      console.log('Default phase templates created successfully!');
+    } catch (error) {
+      console.error('Error creating default phase templates:', error);
+    }
   }
 }

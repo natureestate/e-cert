@@ -3,6 +3,7 @@ import { Box, Card, Heading, Flex, Text, Button, TextField, Select, Badge, Grid 
 import { EyeOpenIcon, DownloadIcon, MagnifyingGlassIcon, ArchiveIcon } from '@radix-ui/react-icons';
 import { FirestoreService } from '../services/firestoreService';
 import { Certificate } from '../types/firestore';
+import { exportCertificateToPDF } from '../utils/pdfGenerator';
 
 interface CertificateHistoryProps {
   onViewCertificate: (certificate: Certificate) => void;
@@ -57,6 +58,34 @@ export const CertificateHistory: React.FC<CertificateHistoryProps> = ({ onViewCe
       case 'expired': return 'หมดอายุ';
       case 'claimed': return 'เคลมแล้ว';
       default: return 'ฉบับร่าง';
+    }
+  };
+
+  // ฟังก์ชันสำหรับดาวน์โหลด PDF
+  const handleDownloadPDF = async (certificate: Certificate) => {
+    try {
+      console.log('🔄 กำลังสร้าง PDF สำหรับใบรับประกัน:', certificate.certificateNumber);
+      
+      // ตรวจสอบว่าผู้ใช้ต้องการดูรายละเอียดก่อนส่งออก PDF
+      alert('🔄 กำลังเปิดใบรับประกันเพื่อส่งออก PDF กรุณารอสักครู่...');
+      
+      // เปิดใบรับประกันในโหมดดูรายละเอียด
+      onViewCertificate(certificate);
+      
+      // รอให้หน้าโหลดเสร็จแล้วค่อยส่งออก PDF
+      setTimeout(async () => {
+        try {
+          await exportCertificateToPDF(certificate.certificateNumber);
+          console.log('✅ ส่งออก PDF สำเร็จ!');
+        } catch (pdfError) {
+          console.error('❌ เกิดข้อผิดพลาดในการส่งออก PDF:', pdfError);
+          alert('เกิดข้อผิดพลาดในการดาวน์โหลด PDF กรุณาลองใหม่อีกครั้ง');
+        }
+      }, 1500); // รอ 1.5 วินาทีให้แน่ใจว่าหน้าโหลดเสร็จ
+
+    } catch (error) {
+      console.error('❌ เกิดข้อผิดพลาดในการเตรียม PDF:', error);
+      alert('เกิดข้อผิดพลาดในการเตรียมดาวน์โหลด PDF กรุณาลองใหม่อีกครั้ง');
     }
   };
 
@@ -220,7 +249,7 @@ export const CertificateHistory: React.FC<CertificateHistoryProps> = ({ onViewCe
                     borderRadius: '8px',
                     transition: 'all 0.2s ease'
                   }}
-                  onClick={() => {/* TODO: Download PDF */}}
+                  onClick={() => handleDownloadPDF(certificate)}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = 'var(--slate-4)';
                   }}

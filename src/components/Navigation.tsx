@@ -13,7 +13,8 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   ClipboardIcon,
-  BarChartIcon
+  BarChartIcon,
+  LayersIcon
 } from '@radix-ui/react-icons';
 
 interface NavigationProps {
@@ -47,11 +48,21 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
     dataManagement: false,
   });
 
-  // เมนูแบบเดี่ยว (ไม่ได้อยู่ในกลุ่ม)
-  const singleMenuItems: MenuItem[] = [
-    { id: 'create', label: 'สร้างใบรับประกัน', icon: FileTextIcon, color: 'emerald' },
-    { id: 'history', label: 'ประวัติใบรับประกัน', icon: ArchiveIcon, color: 'blue' },
-  ];
+  // กลุ่มเมนูใบรับประกัน
+  const certificatesGroup: MenuGroup = {
+    id: 'certificates',
+    label: 'ใบรับประกัน',
+    icon: FileTextIcon,
+    color: 'blue',
+    isExpanded: expandedGroups.certificates,
+    items: [
+      { id: 'create', label: 'สร้างใบรับประกัน', icon: FileTextIcon, color: 'blue' },
+      { id: 'history', label: 'ประวัติใบรับประกัน', icon: ArchiveIcon, color: 'blue' },
+    ]
+  };
+
+  // เมนูแบบเดี่ยว (ไม่ได้อยู่ในกลุ่ม) - ตอนนี้ว่างเปล่า
+  const singleMenuItems: MenuItem[] = [];
 
   // กลุ่มเมนูใบส่งมอบงวดงาน
   const workDeliveryGroup: MenuGroup = {
@@ -79,10 +90,16 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
       { id: 'customers', label: 'จัดการลูกค้า', icon: PersonIcon, color: 'purple' },
       { id: 'projects', label: 'จัดการโครงการ', icon: RocketIcon, color: 'purple' },
       { id: 'products', label: 'จัดการสินค้า', icon: CubeIcon, color: 'purple' },
+      { 
+        id: 'phase-management', 
+        label: 'จัดการเทมเพลตงวดงาน', 
+        icon: LayersIcon, 
+        color: 'purple' 
+      }
     ]
   };
 
-  const menuGroups = [workDeliveryGroup, dataManagementGroup];
+  const menuGroups = [certificatesGroup, workDeliveryGroup, dataManagementGroup];
 
   // ฟังก์ชันสำหรับ toggle กลุ่มเมนู
   const toggleGroup = (groupId: string) => {

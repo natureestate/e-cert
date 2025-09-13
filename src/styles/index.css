@@ -11,7 +11,7 @@
 .AlertDialogContent {
   background-color: white;
   border-radius: 6px;
-  box-shadow: hsl(206 22% 7% / 35%) 0px 10px 38px -10px, hsl(206 22% 7% / 20%) 0px 10px 20px -15px;
+  box-shadow: hsla(206, 22%, 7%, 0.35) 0px 10px 38px -10px, hsla(206, 22%, 7%, 0.20) 0px 10px 20px -15px;
   position: fixed;
   top: 50%;
   left: 50%;
@@ -64,9 +64,9 @@
   --border-color: #e2e8f0;
   --background-color: #f1f5f9;
   --font-family: 'IBM Plex Sans Thai', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
 }
 
 * {
@@ -1147,6 +1147,126 @@ h1 {
 
 .pdf-export-mode button {
   display: none !important;
+}
+
+/* แก้ไขปัญหา color function สำหรับ PDF export */
+.pdf-export-mode * {
+  color: inherit !important;
+  background-color: white !important;
+}
+
+/* แทนที่ CSS color functions ด้วยค่าที่ชัดเจนสำหรับ PDF export */
+.pdf-export-mode {
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1) !important;
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ปิดการใช้ CSS properties ที่ html2canvas อาจมีปัญหา */
+.pdf-export-mode * {
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  clip-path: none !important;
+  mask: none !important;
+}
+
+.pdf-export-mode .rt-BaseCard {
+  background-color: white !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: none !important;
+}
+
+.pdf-export-mode .rt-Text {
+  color: #374151 !important;
+}
+
+.pdf-export-mode .rt-Heading {
+  color: #1e40af !important;
+}
+
+.pdf-export-mode .rt-Badge {
+  background-color: #f3f4f6 !important;
+  color: #374151 !important;
+  border: 1px solid #d1d5db !important;
+}
+
+/* ใช้สีธรรมดาแทน CSS color function */
+.pdf-export-mode [style*="color:"] {
+  color: #374151 !important;
+}
+
+.pdf-export-mode [style*="background-color:"] {
+  background-color: white !important;
+}
+
+/* Progress bar สำหรับ PDF export */
+.pdf-export-mode .progress-bar {
+  background-color: #f3f4f6 !important;
+  border: 1px solid #d1d5db !important;
+}
+
+.pdf-export-mode .progress-fill {
+  background-color: #10b981 !important;
+}
+
+/* Work Delivery PDF Export Mode - เหมือนกับใบรับประกัน */
+#work-delivery-preview.pdf-export-mode {
+  width: 794px !important; /* A4 width at 96 DPI */
+  height: 1123px !important; /* A4 height at 96 DPI */
+  max-width: none !important;
+  aspect-ratio: auto !important;
+  box-shadow: none !important;
+  border: 6px double #1e40af !important;
+  padding: 24px !important;
+  font-size: 11px !important;
+  line-height: 1.3 !important;
+  background: white !important;
+}
+
+#work-delivery-preview.pdf-export-mode .rt-Heading {
+  color: #1e40af !important;
+  font-size: 16px !important;
+  margin-bottom: 8px !important;
+}
+
+#work-delivery-preview.pdf-export-mode .rt-Text {
+  color: #374151 !important;
+  font-size: 11px !important;
+  line-height: 1.3 !important;
+}
+
+#work-delivery-preview.pdf-export-mode .rt-Badge {
+  background-color: #f3f4f6 !important;
+  color: #374151 !important;
+  border: 1px solid #d1d5db !important;
+  font-size: 10px !important;
+}
+
+#work-delivery-preview.pdf-export-mode .rt-Card {
+  background-color: white !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: none !important;
+  padding: 12px !important;
+  margin: 8px 0 !important;
+}
+
+/* Progress bars ใน PDF mode */
+#work-delivery-preview.pdf-export-mode [style*="background-color: var(--green-9)"] {
+  background-color: #10b981 !important;
+}
+
+#work-delivery-preview.pdf-export-mode [style*="background-color: var(--yellow-9)"] {
+  background-color: #f59e0b !important;
+}
+
+#work-delivery-preview.pdf-export-mode [style*="background-color: var(--red-9)"] {
+  background-color: #ef4444 !important;
+}
+
+#work-delivery-preview.pdf-export-mode [style*="background-color: var(--gray-4)"] {
+  background-color: #f3f4f6 !important;
 }
 
 /* Layout fixes for form dropdowns */

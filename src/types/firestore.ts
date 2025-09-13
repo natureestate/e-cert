@@ -131,4 +131,5 @@ export const COLLECTIONS = {
   BATCH_NUMBERS: 'batch_numbers',
   CERTIFICATES: 'certificates',
   WORK_DELIVERIES: 'work_deliveries',
+  PHASE_TEMPLATES: 'phase_templates',
 } as const;

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Flex, Card, Heading, Text, Button, Badge, TextArea } from '@radix-ui/themes';
+import { EyeOpenIcon, DownloadIcon } from '@radix-ui/react-icons';
 import { WorkDelivery } from '../types/workDelivery';
+import { FirestoreService } from '../services/firestoreService';
+import { exportWorkDeliveryToPDF } from '../utils/pdfGenerator';
 
 interface WorkDeliveryHistoryProps {
   onViewDelivery?: (delivery: WorkDelivery) => void;
@@ -19,12 +22,14 @@ export const WorkDeliveryHistory: React.FC<WorkDeliveryHistoryProps> = ({
   useEffect(() => {
     const loadDeliveries = async () => {
       try {
-        // TODO: เพิ่ม Firestore Service สำหรับ Work Delivery
-        // const deliveriesData = await FirestoreService.getWorkDeliveries();
-        // setDeliveries(deliveriesData);
+        // โหลดข้อมูลจริงจาก Firestore
+        const deliveriesData = await FirestoreService.getWorkDeliveries();
+        console.log('📊 โหลดข้อมูลใบส่งมอบงวดงานจาก Firestore:', deliveriesData);
         
-        // ข้อมูลจำลองสำหรับทดสอบ
-        const mockDeliveries: WorkDelivery[] = [
+        // ถ้าไม่มีข้อมูลจริง ให้ใช้ข้อมูลจำลองแทน
+        if (deliveriesData.length === 0) {
+          console.log('📋 ไม่มีข้อมูลใน Firestore ใช้ข้อมูลจำลองแทน');
+          const mockDeliveries: WorkDelivery[] = [
           {
             id: '1',
             deliveryNumber: 'WD-HOUSE-001',
@@ -85,9 +90,13 @@ export const WorkDeliveryHistory: React.FC<WorkDeliveryHistoryProps> = ({
             createdAt: new Date('2024-02-10'),
             updatedAt: new Date('2024-02-10'),
           }
-        ];
-        
-        setDeliveries(mockDeliveries);
+          ];
+          
+          setDeliveries(mockDeliveries);
+        } else {
+          // ใช้ข้อมูลจริงจาก Firestore
+          setDeliveries(deliveriesData);
+        }
       } catch (error) {
         console.error('Error loading work deliveries:', error);
       } finally {
@@ -114,7 +123,51 @@ export const WorkDeliveryHistory: React.FC<WorkDeliveryHistoryProps> = ({
   // จัดการดูรายละเอียด
   const handleViewDelivery = (delivery: WorkDelivery) => {
     if (onViewDelivery) {
+      console.log('🔄 เปิดใบส่งมอบงาน:', delivery.deliveryNumber);
       onViewDelivery(delivery);
+    } else {
+      // แสดงรายละเอียดในการแจ้งเตือน
+      const statusText = delivery.status === 'completed' ? 'เสร็จสิ้น' : 
+                        delivery.status === 'delivered' ? 'ส่งมอบแล้ว' : 
+                        delivery.status === 'accepted' ? 'รับมอบแล้ว' : 'ฉบับร่าง';
+      
+      const workTypeText = delivery.workType === 'house-construction' ? 'งานรับสร้างบ้าน' : 'งาน Precast Concrete';
+      
+      alert(`📋 รายละเอียดใบส่งมอบงาน\n\nหมายเลข: ${delivery.deliveryNumber}\nประเภทงาน: ${workTypeText}\nลูกค้า: ${delivery.customerName}\nโครงการ: ${delivery.projectName}\nสถานะ: ${statusText}\nจำนวนงวด: ${delivery.phases.length} งวด\n\n💡 ฟีเจอร์ดูรายละเอียดแบบเต็มจะพัฒนาต่อในอนาคต`);
+    }
+  };
+
+  // จัดการส่งออก PDF (เหมือนใน CertificateHistory)
+  const handleDownloadPDF = async (delivery: WorkDelivery) => {
+    try {
+      console.log('🔄 กำลังสร้าง PDF สำหรับใบส่งมอบงาน:', delivery.deliveryNumber);
+      
+      if (onViewDelivery) {
+        // ถ้ามี callback ให้เปิดใบส่งมอบก่อนแล้วส่งออก PDF อัตโนมัติ (เหมือน CertificateHistory)
+        alert('🔄 กำลังเปิดใบส่งมอบงานเพื่อส่งออก PDF กรุณารอสักครู่...');
+        onViewDelivery(delivery);
+        
+        // รอให้หน้าโหลดเสร็จแล้วค่อยส่งออก PDF
+        setTimeout(async () => {
+          try {
+            await exportWorkDeliveryToPDF(delivery.deliveryNumber);
+            alert('✅ ส่งออก PDF สำเร็จ!');
+          } catch (error) {
+            console.error('Error exporting PDF:', error);
+            alert('⚠️ ไม่สามารถส่งออก PDF ได้โดยอัตโนมัติ กรุณาคลิกปุ่ม "ส่งออก PDF" ในหน้าตัวอย่าง');
+          }
+        }, 2000);
+      } else {
+        // ถ้าไม่มี callback ให้แนะนำให้ไปที่หน้าสร้างใบส่งมอบ
+        const goToPreview = confirm(`การส่งออก PDF ต้องมีการแสดงตัวอย่างใบส่งมอบก่อน\n\nคุณต้องการไปที่หน้าสร้างใบส่งมอบเพื่อดูตัวอย่างและส่งออก PDF หรือไม่?`);
+        
+        if (goToPreview) {
+          alert(`กรุณาไปที่เมนู:\n- "ใบส่งมอบงาน > ${delivery.workType === 'house-construction' ? 'งานรับสร้างบ้าน' : 'งาน Precast Concrete'}"\n- กรอกข้อมูลและสร้างตัวอย่าง\n- จากนั้นคลิก "ส่งออก PDF"`);
+        }
+      }
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      alert('เกิดข้อผิดพลาดในการส่งออก PDF: ' + (error as Error).message);
     }
   };
 
@@ -342,19 +395,33 @@ export const WorkDeliveryHistory: React.FC<WorkDeliveryHistoryProps> = ({
                       size="2"
                       variant="soft"
                       onClick={() => handleViewDelivery(delivery)}
+                      style={{
+                        background: 'linear-gradient(135deg, var(--blue-9), var(--indigo-9))',
+                        border: 'none',
+                        borderRadius: '6px',
+                        color: 'white'
+                      }}
                     >
-                      ดูรายละเอียด
+                      <Flex align="center" gap="1">
+                        <EyeOpenIcon width="14" height="14" />
+                        <Text size="2">ดูรายละเอียด</Text>
+                      </Flex>
                     </Button>
                     
                     <Button
                       size="2"
-                      variant="ghost"
-                      onClick={() => {
-                        console.log('Export delivery:', delivery.deliveryNumber);
-                        alert('ฟีเจอร์ส่งออก PDF จะเพิ่มในขั้นตอนถัดไป');
+                      variant="soft"
+                      onClick={() => handleDownloadPDF(delivery)}
+                      style={{
+                        backgroundColor: 'var(--slate-3)',
+                        color: 'var(--slate-11)',
+                        borderRadius: '6px'
                       }}
                     >
-                      ส่งออก PDF
+                      <Flex align="center" gap="1">
+                        <DownloadIcon width="14" height="14" />
+                        <Text size="2">ส่งออก PDF</Text>
+                      </Flex>
                     </Button>
                   </Flex>
                 </Flex>

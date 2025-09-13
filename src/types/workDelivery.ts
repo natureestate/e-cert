@@ -44,6 +44,20 @@ export const defaultPrecastPhases: PrecastPhase[] = [
   { phaseNumber: 5, name: 'เกร๊าปูน,เก็บรายละเอียด,ส่งมอบงานติดตั้ง', description: 'เกร๊าปูน เก็บรายละเอียด และส่งมอบงานติดตั้ง', isCompleted: false },
 ];
 
+// Phase Template ที่เก็บใน Firestore
+export interface PhaseTemplateFirestore {
+  id: string;
+  name: string; // ชื่อเทมเพลต เช่น "งานรับสร้างบ้าน 1 ชั้น"
+  workType: WorkType;
+  buildingType?: 'single-story' | 'two-story';
+  description?: string;
+  phases: (HouseConstructionPhase | PrecastPhase)[];
+  isActive: boolean;
+  isDefault: boolean; // เทมเพลตเริ่มต้นของระบบ
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // ข้อมูลใบส่งมอบงวดงาน
 export interface WorkDelivery {
   id?: string;
