@@ -102,17 +102,6 @@ export const WorkDeliveryHouse: React.FC<WorkDeliveryHouseProps> = ({
   // ฟังก์ชันนี้ไม่ใช้แล้วเพราะโลโก้โหลดอัตโนมัติจากบริษัท
   // const handleLogoChange = ... (ถูกลบออกแล้ว)
 
-  // จัดการการเปลี่ยนขนาดโลโก้
-  const handleLogoSizeChange = (size: 'small' | 'medium' | 'large') => {
-    setLogoSize(size);
-    if (logoInfo) {
-      setLogoInfo({
-        ...logoInfo,
-        size
-      });
-    }
-  };
-
   // ฟังก์ชันสำหรับเปลี่ยนขนาดโลโก้
   const handleLogoSizeChange = (size: 'small' | 'medium' | 'large') => {
     setLogoSize(size);
