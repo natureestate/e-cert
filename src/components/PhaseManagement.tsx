@@ -382,10 +382,11 @@ export const PhaseManagement: React.FC = () => {
                   </Box>
                 </Box>
 
-                <Flex gap="2" mt="2">
+                <Flex gap="3" mt="3">
                   <Button 
                     size="2" 
                     variant="soft" 
+                    color="blue"
                     onClick={() => handleEdit(template)}
                   >
                     <Pencil1Icon width="14" height="14" />
@@ -394,6 +395,7 @@ export const PhaseManagement: React.FC = () => {
                   <Button 
                     size="2" 
                     variant="soft" 
+                    color="gray"
                     onClick={() => handleCopy(template)}
                   >
                     <CopyIcon width="14" height="14" />
@@ -593,12 +595,22 @@ export const PhaseManagement: React.FC = () => {
 
           <Flex gap="3" mt="6" justify="end" direction={{ initial: 'column', sm: 'row' }}>
             <Dialog.Close>
-              <Button variant="soft" color="gray" style={{ width: { initial: '100%', sm: 'auto' } }}>
+              <Button 
+                size="2"
+                variant="soft" 
+                color="gray" 
+                style={{ width: { initial: '100%', sm: 'auto' } }}
+              >
+                <Cross2Icon width="14" height="14" />
                 ปิด
               </Button>
             </Dialog.Close>
-            <Button onClick={handleSave} style={{ width: { initial: '100%', sm: 'auto' } }}>
-              <CheckIcon width="16" height="16" />
+            <Button 
+              size="2"
+              onClick={handleSave} 
+              style={{ width: { initial: '100%', sm: 'auto' } }}
+            >
+              <CheckIcon width="14" height="14" />
               {editingTemplate ? 'บันทึกการแก้ไข' : 'สร้างเทมเพลต'}
             </Button>
           </Flex>
