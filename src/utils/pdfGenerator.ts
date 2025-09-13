@@ -214,7 +214,17 @@ export const exportWorkDeliveryToPDF = async (deliveryNumber?: string): Promise<
           clonedElement.style.transform = 'none';
           clonedElement.style.position = 'static';
           
-          // แทนที่ CSS variables ด้วยค่าสีที่ชัดเจน
+          // ลบ attributes ที่อาจสร้างปัญหา
+          const elementsWithProblematicAttributes = clonedDoc.querySelectorAll('[data-accent-color], [style*="color("]');
+          elementsWithProblematicAttributes.forEach(el => {
+            (el as HTMLElement).removeAttribute('data-accent-color');
+            const currentStyle = (el as HTMLElement).style.cssText;
+            if (currentStyle.includes('color(')) {
+              (el as HTMLElement).style.cssText = currentStyle.replace(/color\([^)]+\)/g, '#1e293b');
+            }
+          });
+          
+          // แทนที่ CSS variables ด้วยค่าสีที่ชัดเจน (เหมือนใบรับประกัน)
           const style = clonedDoc.createElement('style');
           style.textContent = `
             * {
@@ -223,22 +233,8 @@ export const exportWorkDeliveryToPDF = async (deliveryNumber?: string): Promise<
               --text-color: #1e293b !important;
               --border-color: #e2e8f0 !important;
               --background-color: #f1f5f9 !important;
-              --green-9: #10b981 !important;
-              --yellow-9: #f59e0b !important;
-              --red-9: #ef4444 !important;
-              --gray-4: #f3f4f6 !important;
-              --blue-9: #1e40af !important;
-              --blue-11: #1e3a8a !important;
-              --gray-6: #9ca3af !important;
-              --gray-9: #6b7280 !important;
-              --blue-6: #3b82f6 !important;
-              --blue-1: #dbeafe !important;
-              --green-2: #d1fae5 !important;
               color: #1e293b !important;
               background-color: white !important;
-            }
-            .progress-bar, [style*="background-color"] {
-              background-color: #f3f4f6 !important;
             }
           `;
           clonedDoc.head.appendChild(style);
@@ -314,10 +310,20 @@ export const exportWorkDeliveryToPDF = async (deliveryNumber?: string): Promise<
     pdf.save(fileName);
     
     console.log(`✅ ส่งออก PDF สำเร็จ: ${fileName}`);
-  } catch (error) {
+  } catch (error: any) {
     // ลบ class พิเศษในกรณีที่เกิดข้อผิดพลาด
     deliveryElement.classList.remove('pdf-export-mode');
     console.error("Error generating PDF:", error);
-    throw new Error("เกิดข้อผิดพลาดในการสร้างไฟล์ PDF: " + (error as Error).message);
+    
+    // แสดงข้อผิดพลาดที่เข้าใจง่าย
+    if (error.message && error.message.includes('color')) {
+      throw new Error("เกิดข้อผิดพลาดในการสร้างไฟล์ PDF: มีปัญหาเกี่ยวกับการแสดงผลสี กรุณารีเฟรชหน้าเว็บแล้วลองใหม่");
+    } else if (error.message && error.message.includes('network')) {
+      throw new Error("เกิดข้อผิดพลาดในการสร้างไฟล์ PDF: ปัญหาการเชื่อมต่อเครือข่าย กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต");
+    } else if (error.message && error.message.includes('canvas')) {
+      throw new Error("เกิดข้อผิดพลาดในการสร้างไฟล์ PDF: ปัญหาการสร้างภาพ กรุณาลองส่งออกใหม่อีกครั้ง");
+    } else {
+      throw new Error(`เกิดข้อผิดพลาดในการสร้างไฟล์ PDF: ${error.message || 'ไม่ทราบสาเหตุ'} กรุณาลองใหม่อีกครั้ง`);
+    }
   }
 };
