@@ -30,90 +30,12 @@ export const WorkDeliveryHistory: React.FC<WorkDeliveryHistoryProps> = ({
         if (deliveriesData.length > 0) {
           console.log('✅ พบข้อมูลจริงใน Firestore จำนวน:', deliveriesData.length);
           setDeliveries(deliveriesData);
-          setFilteredDeliveries(deliveriesData);
           return;
         }
         
-        // ถ้าไม่มีข้อมูลจริง ให้สร้างข้อมูลตัวอย่างในฐานข้อมูล
-        console.log('📋 ไม่มีข้อมูลใน Firestore กำลังสร้างข้อมูลตัวอย่าง...');
-        await FirestoreService.initializeDefaultWorkDeliveries();
-        
-        // โหลดข้อมูลใหม่หลังจากสร้างข้อมูลตัวอย่าง
-        const newDeliveriesData = await FirestoreService.getWorkDeliveries();
-        if (newDeliveriesData.length > 0) {
-          console.log('✅ สร้างและโหลดข้อมูลตัวอย่างเรียบร้อย จำนวน:', newDeliveriesData.length);
-          setDeliveries(newDeliveriesData);
-          setFilteredDeliveries(newDeliveriesData);
-          return;
-        }
-        
-        // ถ้ายังไม่ได้ ให้ใช้ข้อมูลจำลองเป็นทางเลือกสุดท้าย
-        console.log('⚠️ ไม่สามารถสร้างข้อมูลใน Firestore ได้ ใช้ข้อมูลจำลองชั่วคราว');
-          const mockDeliveries: WorkDelivery[] = [
-          {
-            id: '1',
-            deliveryNumber: 'WD-HOUSE-001',
-            workType: 'house-construction',
-            companyId: 'comp1',
-            companyName: 'บริษัท พรีคาสท์คอนกรีต จำกัด',
-            companyAddress: '99/9 อาคารคอนกรีต ถนนพัฒนา แขวงลุมพินี เขตปทุมวัน กรุงเทพมหานคร 10330',
-            companyPhone: '02-123-4567',
-            companyWebsite: 'www.precast.co.th',
-            customerId: 'cust1',
-            customerName: 'คุณสมชาย รักบ้าน',
-            buyer: 'นายสมชาย ใจดี',
-            projectId: 'proj1',
-            projectName: 'โครงการหมู่บ้านเจริญสุข',
-            projectLocation: '123 หมู่ 4 ต.บางรัก อ.เมือง จ.นนทบุรี 11000',
-            phases: [
-              { phaseNumber: 1, name: 'เซ็นสัญญา', description: 'เซ็นสัญญาและทำข้อตกลง', isCompleted: true, completedDate: new Date('2024-01-15') },
-              { phaseNumber: 2, name: 'ฐานราก,ตอม่อ', description: 'งานทำฐานรากและงานตอม่อ', isCompleted: true, completedDate: new Date('2024-02-01') },
-              { phaseNumber: 3, name: 'คานคอดิน', description: 'งานสร้างคานคอดิน', isCompleted: false },
-            ],
-            currentPhase: 3,
-            issueDate: new Date('2024-02-15'),
-            deliveryDate: new Date('2024-02-20'),
-            additionalNotes: 'โครงการบ้านเดี่ยว 2 ชั้น',
-            status: 'delivered',
-            isActive: true,
-            createdAt: new Date('2024-02-15'),
-            updatedAt: new Date('2024-02-15'),
-          },
-          {
-            id: '2',
-            deliveryNumber: 'WD-PRECAST-001',
-            workType: 'precast-concrete',
-            companyId: 'comp1',
-            companyName: 'บริษัท พรีคาสท์คอนกรีต จำกัด',
-            companyAddress: '99/9 อาคารคอนกรีต ถนนพัฒนา แขวงลุมพินี เขตปทุมวัน กรุงเทพมหานคร 10330',
-            companyPhone: '02-123-4567',
-            companyWebsite: 'www.precast.co.th',
-            customerId: 'cust2',
-            customerName: 'คุณสมหญิง สร้างบ้าน',
-            buyer: 'นางสาวสมหญิง สวยงาม',
-            projectId: 'proj2',
-            projectName: 'โครงการคอนโดมิเนียมสมัยใหม่',
-            projectLocation: '456 ถนนรัชดา แขวงลาดยาว เขตจตุจักร กรุงเทพฯ 10900',
-            phases: [
-              { phaseNumber: 1, name: 'เตรียมอุปกรณ์ในการสั่งผลิต', description: 'เตรียมอุปกรณ์และวัสดุสำหรับการสั่งผลิต', isCompleted: true, completedDate: new Date('2024-01-10') },
-              { phaseNumber: 2, name: 'งานติดตั้งคานคอดิน', description: 'งานติดตั้งคานคอดิน', isCompleted: true, completedDate: new Date('2024-01-25') },
-              { phaseNumber: 3, name: 'งานติดตั้งผนังชั้น 1', description: 'งานติดตั้งผนังชั้น 1', isCompleted: true, completedDate: new Date('2024-02-10') },
-              { phaseNumber: 4, name: 'งานวางแผ่นพื้น,ผนังชั้น 2,บันไดชั้น 2', description: 'งานวางแผ่นพื้น ผนังชั้น 2 และบันไดชั้น 2', isCompleted: false },
-              { phaseNumber: 5, name: 'เกร๊าปูน,เก็บรายละเอียด,ส่งมอบงานติดตั้ง', description: 'เกร๊าปูน เก็บรายละเอียด และส่งมอบงานติดตั้ง', isCompleted: false },
-            ],
-            currentPhase: 4,
-            issueDate: new Date('2024-02-10'),
-            deliveryDate: new Date('2024-02-15'),
-            additionalNotes: 'โครงการ Precast บ้าน 2 ชั้น',
-            status: 'accepted',
-            isActive: true,
-            createdAt: new Date('2024-02-10'),
-            updatedAt: new Date('2024-02-10'),
-          }
-          ];
-          
-          setDeliveries(mockDeliveries);
-          setFilteredDeliveries(mockDeliveries);
+        // ถ้าไม่มีข้อมูล ให้แสดงรายการว่าง
+        console.log('📋 ไม่มีข้อมูลใบส่งมอบงานใน Firestore');
+        setDeliveries([]);
       } catch (error) {
         console.error('Error loading work deliveries:', error);
       } finally {

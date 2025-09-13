@@ -299,6 +299,17 @@ export const DataManagementRadix: React.FC<DataManagementRadixProps> = ({ dataTy
     }
   };
 
+  // ฟังก์ชันลบข้อมูลใบส่งมอบงานทั้งหมด (ชั่วคราว)
+  const handleClearWorkDeliveries = async () => {
+    try {
+      await FirestoreService.clearAllWorkDeliveries();
+      alert('ลบข้อมูลใบส่งมอบงานทั้งหมดเรียบร้อยแล้ว');
+    } catch (error) {
+      console.error('Error clearing work deliveries:', error);
+      alert('เกิดข้อผิดพลาดในการลบข้อมูลใบส่งมอบงาน');
+    }
+  };
+
   // ลบรายการข้อมูลแต่ละตัว
   const handleDeleteItem = async () => {
     if (!itemToDelete) return;
@@ -740,6 +751,11 @@ export const DataManagementRadix: React.FC<DataManagementRadixProps> = ({ dataTy
               </AlertDialog.Portal>
             </AlertDialog.Root>
           )}
+          
+          {/* ปุ่มลบข้อมูลใบส่งมอบงานทั้งหมด (ชั่วคราว) */}
+          <Button variant="soft" color="orange" onClick={handleClearWorkDeliveries}>
+            🧹 ลบข้อมูลใบส่งมอบงานทั้งหมด
+          </Button>
 
           <Button onClick={handleAdd}>
             + เพิ่ม{getDataTypeLabel()}

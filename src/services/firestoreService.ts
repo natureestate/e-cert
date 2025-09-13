@@ -487,8 +487,8 @@ export class FirestoreService {
         isActive: true
       });
 
-      // สร้างข้อมูลตัวอย่างใบส่งมอบงาน
-      await this.initializeDefaultWorkDeliveries();
+      // ไม่สร้างข้อมูลตัวอย่างใบส่งมอบงานแล้ว
+      // await this.initializeDefaultWorkDeliveries();
 
       console.log('Default data created successfully!');
     } catch (error) {
@@ -554,6 +554,20 @@ export class FirestoreService {
       isActive: false,
       updatedAt: new Date()
     });
+  }
+
+  // ลบข้อมูลใบส่งมอบงานทั้งหมดออกจากฐานข้อมูล
+  static async clearAllWorkDeliveries(): Promise<void> {
+    try {
+      const querySnapshot = await getDocs(collection(db, COLLECTIONS.WORK_DELIVERIES));
+      const deletePromises = querySnapshot.docs.map(doc => 
+        deleteDoc(doc.ref)
+      );
+      await Promise.all(deletePromises);
+      console.log('✅ ลบข้อมูลใบส่งมอบงานทั้งหมดเรียบร้อย');
+    } catch (error) {
+      console.error('❌ เกิดข้อผิดพลาดในการลบข้อมูล:', error);
+    }
   }
 
   // สร้างข้อมูลตัวอย่างใบส่งมอบงาน
