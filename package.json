@@ -10,6 +10,9 @@
     "restart": "lsof -ti:3600 | xargs kill -9 2>/dev/null || true && npm run dev"
   },
   "dependencies": {
+    "@pdfme/common": "^5.4.5",
+    "@pdfme/generator": "^5.4.5",
+    "@pdfme/schemas": "^5.4.5",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -23,8 +26,6 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@radix-ui/themes": "^3.2.1",
     "firebase": "^12.2.1",
-    "html2canvas": "latest",
-    "jspdf": "latest",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },

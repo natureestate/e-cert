@@ -438,12 +438,6 @@ export const WorkDeliveryHouse: React.FC<WorkDeliveryHouseProps> = ({
         // ขั้นที่ 4: ตั้งค่าโลโก้หากมี
         if (viewingWorkDelivery.companyLogoUrl) {
           setLogoSrc(viewingWorkDelivery.companyLogoUrl);
-          setLogoFileName('company-logo');
-          setLogoInfo({
-            url: viewingWorkDelivery.companyLogoUrl,
-            fileName: 'company-logo',
-            size: 'medium'
-          });
         }
 
         console.log('✅ โหลดข้อมูลจาก history สำเร็จ:', {
@@ -666,7 +660,11 @@ export const WorkDeliveryHouse: React.FC<WorkDeliveryHouseProps> = ({
 
     setIsExporting(true);
     try {
-      await exportWorkDeliveryToPDF(deliveryDetails.deliveryNumber);
+      await exportWorkDeliveryToPDF(
+        deliveryDetails.deliveryNumber,
+        deliveryDetails,
+        logoSrc
+      );
       alert('ส่งออก PDF สำเร็จ!');
     } catch (error) {
       console.error('Error exporting PDF:', error);

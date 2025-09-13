@@ -4,6 +4,7 @@ import { EyeOpenIcon, DownloadIcon, MagnifyingGlassIcon, ArchiveIcon } from '@ra
 import { FirestoreService } from '../services/firestoreService';
 import { Certificate } from '../types/firestore';
 import { exportCertificateToPDF } from '../utils/pdfGenerator';
+import { CertificateDetails } from '../types/certificate';
 
 interface CertificateHistoryProps {
   onViewCertificate: (certificate: Certificate) => void;
@@ -72,16 +73,36 @@ export const CertificateHistory: React.FC<CertificateHistoryProps> = ({ onViewCe
       // เปิดใบรับประกันในโหมดดูรายละเอียด
       onViewCertificate(certificate);
       
-      // รอให้หน้าโหลดเสร็จแล้วค่อยส่งออก PDF
-      setTimeout(async () => {
-        try {
-          await exportCertificateToPDF(certificate.certificateNumber);
-          console.log('✅ ส่งออก PDF สำเร็จ!');
-        } catch (pdfError) {
-          console.error('❌ เกิดข้อผิดพลาดในการส่งออก PDF:', pdfError);
-          alert('เกิดข้อผิดพลาดในการดาวน์โหลด PDF กรุณาลองใหม่อีกครั้ง');
-        }
-      }, 1500); // รอ 1.5 วินาทีให้แน่ใจว่าหน้าโหลดเสร็จ
+      // สร้าง CertificateDetails จากข้อมูล certificate
+      const certificateDetails: CertificateDetails = {
+        companyName: certificate.companyName,
+        companyAddress: certificate.companyAddress,
+        companyPhone: certificate.companyPhone,
+        companyWebsite: certificate.companyWebsite,
+        projectNameAndLocation: `${certificate.projectName} - ${certificate.projectLocation}`,
+        customerName: certificate.customerName,
+        buyer: certificate.buyer,
+        deliveryDate: certificate.deliveryDate instanceof Date ? certificate.deliveryDate.toLocaleDateString('th-TH') : certificate.deliveryDate,
+        productItems: certificate.productItems,
+        batchNumber: Array.isArray(certificate.batchNumber) ? certificate.batchNumber : [certificate.batchNumber],
+        certificateNumber: certificate.certificateNumber,
+        issueDate: certificate.issueDate instanceof Date ? certificate.issueDate.toLocaleDateString('th-TH') : certificate.issueDate,
+        additionalNotes: certificate.additionalNotes,
+      };
+
+      // ส่งออก PDF ทันทีโดยไม่ต้องรอการโหลดหน้า
+      try {
+        await exportCertificateToPDF(
+          certificate.certificateNumber,
+          certificateDetails,
+          null, // logoSrc - ใช้ default หรือจาก company
+          undefined // warrantyTerms - ใช้ default
+        );
+        console.log('✅ ส่งออก PDF สำเร็จ!');
+      } catch (pdfError) {
+        console.error('❌ เกิดข้อผิดพลาดในการส่งออก PDF:', pdfError);
+        alert('เกิดข้อผิดพลาดในการดาวน์โหลด PDF กรุณาลองใหม่อีกครั้ง');
+      }
 
     } catch (error) {
       console.error('❌ เกิดข้อผิดพลาดในการเตรียม PDF:', error);

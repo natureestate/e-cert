@@ -99,37 +99,19 @@ export const WorkDeliveryPrecast: React.FC<WorkDeliveryPrecastProps> = ({
   // จัดการการเปลี่ยนขนาดโลโก้
   const handleLogoSizeChange = (size: 'small' | 'medium' | 'large') => {
     setLogoSize(size);
-    if (logoInfo) {
-      setLogoInfo({
-        ...logoInfo,
-        size
-      });
+    // บันทึกขนาดโลโก้ลง localStorage (ใช้สำหรับบันทึกการตั้งค่าผู้ใช้)
+    try {
+      localStorage.setItem('preferredLogoSize', size);
+    } catch (error) {
+      console.warn('ไม่สามารถบันทึกขนาดโลโก้ลง localStorage:', error);
     }
   };
 
-  // จัดการการลบโลโก้
-  const handleRemoveLogo = async () => {
-    if (logoInfo?.url) {
-      try {
-        await LogoStorageService.deleteLogo(logoInfo.url);
-        console.log('🗑️ ลบโลโก้สำเร็จ');
-      } catch (error) {
-        console.error('Error deleting logo:', error);
-      }
-    }
-    
-    setLogoSrc(null);
-    setLogoFileName(null);
-    setLogoInfo(null);
-  };
+  // ฟังก์ชันนี้ไม่ใช้แล้วเพราะโลโก้โหลดอัตโนมัติจากบริษัท
+  // const handleRemoveLogo = ... (ถูกลบออกแล้ว)
 
-  // จัดการการเลือกโลโก้จาก gallery
-  const handleSelectLogoFromGallery = (selectedLogoInfo: LogoInfo) => {
-    setLogoSrc(selectedLogoInfo.url);
-    setLogoFileName(selectedLogoInfo.fileName);
-    setLogoSize(selectedLogoInfo.size);
-    setLogoInfo(selectedLogoInfo);
-  };
+  // ฟังก์ชันนี้ไม่ใช้แล้วเพราะโลโก้โหลดอัตโนมัติจากบริษัท
+  // const handleSelectLogoFromGallery = ... (ถูกลบออกแล้ว)
 
   // จัดการการเปลี่ยนประเภทงาน (ล็อกไว้ที่ precast-concrete)
   const handleWorkTypeChange = (workType: WorkType) => {
@@ -230,20 +212,10 @@ export const WorkDeliveryPrecast: React.FC<WorkDeliveryPrecastProps> = ({
               // โหลดโลโก้อัตโนมัติเมื่อเลือกบริษัท
               if (selectedCompany?.logoUrl) {
                 setLogoSrc(selectedCompany.logoUrl);
-                setLogoFileName('company-logo');
-                setLogoInfo({
-                  url: selectedCompany.logoUrl,
-                  fileName: 'company-logo',
-                  fullPath: '',
-                  size: 'medium',
-                  uploadedAt: new Date()
-                });
                 console.log('🏢 โหลดโลโก้บริษัทอัตโนมัติ:', selectedCompany.logoUrl);
               } else {
                 // ล้างโลโก้หากบริษัทไม่มีโลโก้
                 setLogoSrc(null);
-                setLogoFileName(null);
-                setLogoInfo(null);
                 console.log('🏢 บริษัทไม่มีโลโก้');
               }
             })
@@ -251,8 +223,6 @@ export const WorkDeliveryPrecast: React.FC<WorkDeliveryPrecastProps> = ({
         } else {
           // ล้างโลโก้หากไม่ได้เลือกบริษัท
           setLogoSrc(null);
-          setLogoFileName(null);
-          setLogoInfo(null);
         }
 
         if (formData.customerId) {
@@ -413,12 +383,6 @@ export const WorkDeliveryPrecast: React.FC<WorkDeliveryPrecastProps> = ({
       // ตั้งค่าโลโก้หากมี
       if (viewingWorkDelivery.companyLogoUrl) {
         setLogoSrc(viewingWorkDelivery.companyLogoUrl);
-        setLogoFileName('company-logo');
-        setLogoInfo({
-          url: viewingWorkDelivery.companyLogoUrl,
-          fileName: 'company-logo',
-          size: 'medium'
-        });
       }
 
       console.log('✅ โหลดข้อมูลจาก history สำเร็จ - preview จะแสดงอัตโนมัติ');
@@ -626,7 +590,11 @@ export const WorkDeliveryPrecast: React.FC<WorkDeliveryPrecastProps> = ({
 
     setIsExporting(true);
     try {
-      await exportWorkDeliveryToPDF(deliveryDetails.deliveryNumber);
+      await exportWorkDeliveryToPDF(
+        deliveryDetails.deliveryNumber,
+        deliveryDetails,
+        logoSrc
+      );
       alert('ส่งออก PDF สำเร็จ!');
     } catch (error) {
       console.error('Error exporting PDF:', error);
@@ -698,11 +666,8 @@ export const WorkDeliveryPrecast: React.FC<WorkDeliveryPrecastProps> = ({
           isFormValid={isFormValid}
           onPhaseTemplateChange={handlePhaseTemplateChange}
           logoSrc={logoSrc}
-          logoFileName={logoFileName}
           logoSize={logoSize}
           onLogoSizeChange={handleLogoSizeChange}
-          onRemoveLogo={handleRemoveLogo}
-          onSelectLogoFromGallery={handleSelectLogoFromGallery}
           onGeneratePreview={generatePreviewManually}
         />
         

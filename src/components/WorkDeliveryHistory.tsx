@@ -4,6 +4,7 @@ import { EyeOpenIcon, DownloadIcon } from '@radix-ui/react-icons';
 import { WorkDelivery } from '../types/workDelivery';
 import { FirestoreService } from '../services/firestoreService';
 import { exportWorkDeliveryToPDF } from '../utils/pdfGenerator';
+import { WorkDeliveryDetails } from '../types/workDelivery';
 
 interface WorkDeliveryHistoryProps {
   onViewDelivery?: (delivery: WorkDelivery) => void;
@@ -86,16 +87,36 @@ export const WorkDeliveryHistory: React.FC<WorkDeliveryHistoryProps> = ({
         alert('🔄 กำลังเปิดใบส่งมอบงานเพื่อส่งออก PDF กรุณารอสักครู่...');
         onViewDelivery(delivery);
         
-        // รอให้หน้าโหลดเสร็จแล้วค่อยส่งออก PDF
-        setTimeout(async () => {
-          try {
-            await exportWorkDeliveryToPDF(delivery.deliveryNumber);
-            alert('✅ ส่งออก PDF สำเร็จ!');
-          } catch (error) {
-            console.error('Error exporting PDF:', error);
-            alert('⚠️ ไม่สามารถส่งออก PDF ได้โดยอัตโนมัติ กรุณาคลิกปุ่ม "ส่งออก PDF" ในหน้าตัวอย่าง');
-          }
-        }, 2000);
+        // สร้าง WorkDeliveryDetails จากข้อมูล delivery
+        const deliveryDetails: WorkDeliveryDetails = {
+          companyName: delivery.companyName,
+          companyAddress: delivery.companyAddress,
+          companyPhone: delivery.companyPhone,
+          companyWebsite: delivery.companyWebsite,
+          projectNameAndLocation: `${delivery.projectName} - ${delivery.projectLocation}`,
+          customerName: delivery.customerName,
+          buyer: delivery.buyer,
+          workType: delivery.workType,
+          phases: delivery.phases,
+          currentPhase: delivery.currentPhase,
+          deliveryNumber: delivery.deliveryNumber,
+          issueDate: delivery.issueDate instanceof Date ? delivery.issueDate.toLocaleDateString('th-TH') : delivery.issueDate,
+          deliveryDate: delivery.deliveryDate instanceof Date ? delivery.deliveryDate.toLocaleDateString('th-TH') : delivery.deliveryDate,
+          additionalNotes: delivery.additionalNotes,
+        };
+
+        // ส่งออก PDF ทันทีโดยไม่ต้องรอการโหลดหน้า
+        try {
+          await exportWorkDeliveryToPDF(
+            delivery.deliveryNumber,
+            deliveryDetails,
+            null // logoSrc - ใช้ default หรือจาก company
+          );
+          alert('✅ ส่งออก PDF สำเร็จ!');
+        } catch (error) {
+          console.error('Error exporting PDF:', error);
+          alert('⚠️ ไม่สามารถส่งออก PDF ได้โดยอัตโนมัติ กรุณาคลิกปุ่ม "ส่งออก PDF" ในหน้าตัวอย่าง');
+        }
       } else {
         // ถ้าไม่มี callback ให้แนะนำให้ไปที่หน้าสร้างใบส่งมอบ
         const goToPreview = confirm(`การส่งออก PDF ต้องมีการแสดงตัวอย่างใบส่งมอบก่อน\n\nคุณต้องการไปที่หน้าสร้างใบส่งมอบเพื่อดูตัวอย่างและส่งออก PDF หรือไม่?`);

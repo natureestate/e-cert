@@ -503,7 +503,12 @@ const App: React.FC = () => {
 
     setIsExporting(true);
     try {
-      await exportCertificateToPDF(certificateDetails.certificateNumber);
+      await exportCertificateToPDF(
+        certificateDetails.certificateNumber,
+        certificateDetails,
+        logoSrc,
+        warrantyTerms
+      );
     } catch (error) {
       console.error('❌ เกิดข้อผิดพลาดในการส่งออก PDF:', error);
       alert((error as Error).message);
