@@ -594,7 +594,7 @@ export const PhaseManagement: React.FC = () => {
           <Flex gap="3" mt="6" justify="end" direction={{ initial: 'column', sm: 'row' }}>
             <Dialog.Close>
               <Button variant="soft" color="gray" style={{ width: { initial: '100%', sm: 'auto' } }}>
-                ยกเลิก
+                ปิด
               </Button>
             </Dialog.Close>
             <Button onClick={handleSave} style={{ width: { initial: '100%', sm: 'auto' } }}>

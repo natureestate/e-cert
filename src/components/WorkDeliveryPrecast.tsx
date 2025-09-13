@@ -301,11 +301,12 @@ export const WorkDeliveryPrecast: React.FC<WorkDeliveryPrecastProps> = ({
       // ตรวจสอบเงื่อนไขการแสดง preview แบบผ่อนคลาย
       const hasBasicData = formData.companyId && formData.customerId && formData.projectId && formData.deliveryDate;
       
-      if (hasBasicData && 
-          relatedData.company && 
-          relatedData.customer && 
-          relatedData.project && 
-          phases.length > 0) {
+      // เงื่อนไขที่ผ่อนคลายสำหรับ viewing mode จาก history
+      const canGeneratePreview = viewingWorkDelivery ? 
+        (formData.deliveryDate && phases.length > 0) : // สำหรับ viewing mode เช็คแค่ deliveryDate และ phases
+        (hasBasicData && relatedData.company && relatedData.customer && relatedData.project && phases.length > 0);
+
+      if (canGeneratePreview) {
         
         try {
           // สร้างวันที่ปัจจุบันในรูปแบบไทย
@@ -326,20 +327,22 @@ export const WorkDeliveryPrecast: React.FC<WorkDeliveryPrecastProps> = ({
           });
 
           // สร้างข้อมูลใบส่งมอบ preview
+          // ใช้ข้อมูลจาก workDeliveryDetails หากมี (กรณี viewing mode) หรือใช้ relatedData
           const previewDeliveryDetails: WorkDeliveryDetails = {
-            companyName: relatedData.company.name,
-            companyAddress: relatedData.company.address,
-            companyPhone: relatedData.company.phone,
-            companyWebsite: relatedData.company.website,
-            projectNameAndLocation: `${relatedData.project.name} - ${relatedData.project.location}`,
-            customerName: relatedData.customer.name,
-            buyer: relatedData.customer.buyer,
+            companyName: workDeliveryDetails?.companyName || relatedData.company?.name || '',
+            companyAddress: workDeliveryDetails?.companyAddress || relatedData.company?.address || '',
+            companyPhone: workDeliveryDetails?.companyPhone || relatedData.company?.phone || '',
+            companyWebsite: workDeliveryDetails?.companyWebsite || relatedData.company?.website || '',
+            projectNameAndLocation: workDeliveryDetails?.projectNameAndLocation || 
+              (relatedData.project ? `${relatedData.project.name} - ${relatedData.project.location}` : ''),
+            customerName: workDeliveryDetails?.customerName || relatedData.customer?.name || '',
+            buyer: workDeliveryDetails?.buyer || relatedData.customer?.buyer || '',
             workType: formData.workType,
             phases: phases,
             currentPhase: formData.currentPhase,
-            deliveryNumber,
-            issueDate,
-            deliveryDate: formattedDeliveryDate,
+            deliveryNumber: workDeliveryDetails?.deliveryNumber || deliveryNumber,
+            issueDate: workDeliveryDetails?.issueDate || issueDate,
+            deliveryDate: workDeliveryDetails?.deliveryDate || formattedDeliveryDate,
             additionalNotes: formData.additionalNotes,
           };
           
