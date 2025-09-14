@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --port 3600",
     "build": "vite build",
+    "deploy": "firebase deploy --only hosting",
     "preview": "vite preview",
     "restart": "lsof -ti:3600 | xargs kill -9 2>/dev/null || true && npm run dev"
   },
