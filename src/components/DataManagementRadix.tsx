@@ -15,7 +15,7 @@ import {
   Section
 } from '@radix-ui/themes';
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
-import { ImageIcon, UploadIcon, TrashIcon } from '@radix-ui/react-icons';
+import { ImageIcon, UploadIcon, TrashIcon, Cross2Icon, CheckIcon } from '@radix-ui/react-icons';
 
 interface DataManagementRadixProps {
   dataType: 'companies' | 'customers' | 'projects' | 'products' | 'batches';
@@ -737,13 +737,19 @@ export const DataManagementRadix: React.FC<DataManagementRadixProps> = ({ dataTy
 
                   <Flex gap="3" mt="4" justify="end">
                     <AlertDialog.Cancel asChild>
-                      <Button variant="soft" color="gray">
-                        ยกเลิก
+                      <Button variant="soft" color="gray" size="3">
+                        <Flex align="center" gap="2">
+                          <Cross2Icon width="16" height="16" />
+                          <Text>ยกเลิก</Text>
+                        </Flex>
                       </Button>
                     </AlertDialog.Cancel>
                     <AlertDialog.Action asChild>
-                      <Button variant="solid" color="red" onClick={handleDeleteAll}>
-                        ลบทั้งหมด
+                      <Button variant="solid" color="red" size="3" onClick={handleDeleteAll}>
+                        <Flex align="center" gap="2">
+                          <TrashIcon width="16" height="16" />
+                          <Text>ลบทั้งหมด</Text>
+                        </Flex>
                       </Button>
                     </AlertDialog.Action>
                   </Flex>
@@ -799,11 +805,17 @@ export const DataManagementRadix: React.FC<DataManagementRadixProps> = ({ dataTy
                 {renderFormFields()}
                 
                 <Flex gap="3" mt="4" justify="end">
-                  <Button variant="soft" color="gray" onClick={() => setIsDialogOpen(false)}>
-                    ยกเลิก
+                  <Button variant="soft" color="gray" size="3" onClick={() => setIsDialogOpen(false)}>
+                    <Flex align="center" gap="2">
+                      <Cross2Icon width="16" height="16" />
+                      <Text>ยกเลิก</Text>
+                    </Flex>
                   </Button>
-                  <Button onClick={handleSave}>
-                    บันทึก
+                  <Button size="3" onClick={handleSave}>
+                    <Flex align="center" gap="2">
+                      <CheckIcon width="16" height="16" />
+                      <Text>บันทึก</Text>
+                    </Flex>
                   </Button>
                 </Flex>
               </div>
@@ -824,13 +836,19 @@ export const DataManagementRadix: React.FC<DataManagementRadixProps> = ({ dataTy
 
             <Flex gap="3" mt="4" justify="end">
               <AlertDialog.Cancel asChild>
-                <Button variant="soft" color="gray">
-                  ยกเลิก
+                <Button variant="soft" color="gray" size="3">
+                  <Flex align="center" gap="2">
+                    <Cross2Icon width="16" height="16" />
+                    <Text>ยกเลิก</Text>
+                  </Flex>
                 </Button>
               </AlertDialog.Cancel>
               <AlertDialog.Action asChild>
-                <Button variant="solid" color="red" onClick={handleDeleteItem}>
-                  ลบ
+                <Button variant="solid" color="red" size="3" onClick={handleDeleteItem}>
+                  <Flex align="center" gap="2">
+                    <TrashIcon width="16" height="16" />
+                    <Text>ลบ</Text>
+                  </Flex>
                 </Button>
               </AlertDialog.Action>
             </Flex>
